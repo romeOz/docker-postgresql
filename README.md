@@ -5,11 +5,11 @@ Features
 
  * [Creating user and database](#creating-user-and-database)
  * [Creating a Snapshot or Slave Database](#creating-a-snapshot-or-slave-database)
- * Search plain text with accent
+ * [Search plain text with accent](#enable-unaccent-search-plain-text-with-accent)
  * [Host UID / GID Mapping](#host-uid--gid-mapping)
- * **Backup of a PostgreSQL cluster**
- * **Checking backup**
- * **Restore from backup**
+ * **[Backup of a PostgreSQL cluster](#backup-of-a-postgresql-cluster)**
+ * **[Checking backup](#checking-backup)**
+ * **[Restore from backup](#restore-from-backup)**
  
 > Bolded features are different from [sameersbn/docker-postgresql](https://github.com/sameersbn/docker-postgresql).
 
@@ -21,7 +21,7 @@ Installation
  * Pull the latest version of the image.
  
 ```bash
-docker pull romeoz/docker-postgresql`
+docker pull romeoz/docker-postgresql
 ```
 
 Alternately you can build the image yourself.
