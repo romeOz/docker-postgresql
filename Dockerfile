@@ -1,7 +1,7 @@
 FROM ubuntu:trusty
 MAINTAINER romeOz <serggalka@gmail.com>
 
-ENV PG_LOCALE="ru_RU.UTF-8" \
+ENV PG_LOCALE="en_US.UTF-8" \
 	PG_VERSION=9.4 \
     PG_USER=postgres \
     PG_HOME=/var/lib/postgresql \
@@ -17,7 +17,7 @@ ENV PG_CONFDIR="/etc/postgresql/${PG_VERSION}/main" \
 # Set the locale
 RUN locale-gen ${PG_LOCALE}
 ENV LANG ${PG_LOCALE}
-ENV	LANGUAGE ru_RU:ru
+ENV	LANGUAGE en_US:en
 ENV	LC_ALL ${PG_LOCALE}
 
 RUN apt-get install -y wget \
