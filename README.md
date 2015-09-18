@@ -266,6 +266,11 @@ docker pull romeoz/postgresql
 docker run --name postgresql -d [OPTIONS] romeoz/postgresql
 ```
 
+Out of the box
+-------------------
+ * Ubuntu 14.04.3 (LTS)
+ * PostgreSQL 9.4.4
+
 License
 -------------------
 
