@@ -177,12 +177,6 @@ if [[ ! -d ${PG_DATADIR} ]]; then
         echo "Success checking backup"
       else
         echo "Fail checking backup: ${PG_BACKUP}/${PG_BACKUP_FILENAME}"
-        #rsyslogd
-        #logger -p local3.info -t check_backup "Does not checking."
-        #if [[ -f "/var/log/syslog" ]]; then
-        #  cp /var/log/syslog ${PG_BACKUP}/log/
-        #fi        
-        #cp -r /var/log/postgresql ${PG_BACKUP}/log/
         exit 1
       fi      
     else
