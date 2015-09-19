@@ -272,7 +272,7 @@ Logging
 All the logs are forwarded to stdout and sterr. You have use the command `docker logs`.
 
 ```bash
-docker logs app
+docker logs postgresql
 
 ```
 
@@ -281,7 +281,7 @@ docker logs app
 You can then simply split the stdout & stderr of the container by piping the separate streams and send them to files:
 
 ```bash
-docker logs app > stdout.log 2>stderr.log
+docker logs postgresql > stdout.log 2>stderr.log
 cat stdout.log
 cat stderr.log
 ```
@@ -289,13 +289,13 @@ cat stderr.log
 or split stdout and error to host stdout:
 
 ```bash
-docker logs app > -
-docker logs app 2> -
+docker logs postgresql > -
+docker logs postgresql 2> -
 ```
 
 ####Rotate logs
 
-Create the file /etc/logrotate.d/docker-containers with the following text inside
+Create the file /etc/logrotate.d/docker-containers with the following text inside:
 
 ```
 /var/lib/docker/containers/*/*.log {
