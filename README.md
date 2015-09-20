@@ -16,6 +16,7 @@ Table of Contents
  * [Dumping database](#dumping-database)
  * [Logging](#logging)
  * [Upgrading](#upgrading)
+ * [Out of the box](#out-of-the-box)
  
 > Bolded features are different from [sameersbn/docker-postgresql](https://github.com/sameersbn/docker-postgresql).
 
