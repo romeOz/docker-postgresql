@@ -20,7 +20,6 @@ Table of Contents
  
 > Bolded features are different from [sameersbn/docker-postgresql](https://github.com/sameersbn/docker-postgresql).
 
-
 Installation
 -------------------
 
@@ -252,7 +251,7 @@ docker run --name restore_db -d \
 docker exec -it restore_db bash -c \
   'lbzip2 -dc -n 2 /tmp/backup/backup.tar.bz2 | $(sudo -u postgres pg_restore --create --verbose -d template1)'  
 ``` 
->Instead of volumes you can use the command `docker cp /to/path/backup/backup.tar.bz2 restore_db:/tmp/backup/backup.tar.bz2`.
+>Instead of volumes you can use the command `docker cp /to/path/backup/backup.tar.bz2 restore_db:/tmp/backup/backup.tar.bz2` (support Docker 1.8+).
 
 
 Enable Unaccent (Search plain text with accent)
