@@ -1,15 +1,21 @@
 Independent fork by [sameersbn/docker-postgresql](https://github.com/sameersbn/docker-postgresql).
 
-Features
+Table of Contents
 -------------------
 
- * [Creating user and database](#creating-user-and-database)
+ * [Installation](#installation)
+ * [Quick Start](#quick-start)
+ * [Persistence](#persistence)
+ * [Creating user and database](#creating-user-and-database-at-launch)
  * [Creating a Snapshot or Slave Database](#creating-a-snapshot-or-slave-database)
  * [Search plain text with accent](#enable-unaccent-search-plain-text-with-accent)
  * [Host UID / GID Mapping](#host-uid--gid-mapping)
  * **[Backup of a PostgreSQL cluster](#backup-of-a-postgresql-cluster)**
  * **[Checking backup](#checking-backup)**
  * **[Restore from backup](#restore-from-backup)**
+ * [Dumping database](#dumping-database)
+ * [Logging](#logging)
+ * [Upgrading](#upgrading)
  
 > Bolded features are different from [sameersbn/docker-postgresql](https://github.com/sameersbn/docker-postgresql).
 
@@ -217,6 +223,37 @@ docker run --name='db_restore' -d \
 
 For restore default  used the last backup. To modify, you must specify a environment variable `PG_BACKUP_FILENAME`.
 
+Dumping database
+-------------------
+
+Create a database named "foo":
+
+```bash
+docker run --name db -d -e 'DB_NAME=foo' \
+  -v /to/path/backup:/tmp/backup \
+  romeoz/postgresql
+```  
+  
+Dumping database to /tmp/backup/:
+
+```bash
+docker exec -it db bash -c \
+  'sudo -u postgres pg_dump --dbname=foo --format=tar | lbzip2 -n 2 -9 > /tmp/backup/backup.tar.bz2'
+```
+
+Restore database:
+
+```bash
+docker run --name restore_db -d \
+  -v /to/path/backup:/tmp/backup \
+  romeoz/postgresql
+  
+docker exec -it restore_db bash -c \
+  'lbzip2 -dc -n 2 /tmp/backup/backup.tar.bz2 | $(sudo -u postgres pg_restore --create --verbose -d template1)'  
+``` 
+>Instead of volumes you can use the command `docker cp /to/path/backup/backup.tar.bz2 restore_db:/tmp/backup/backup.tar.bz2`.
+
+
 Enable Unaccent (Search plain text with accent)
 -------------------
 
@@ -241,29 +278,6 @@ Also the container processes seem to be executed as the host's user/group `[what
 docker run --name=postgresql -it --rm [options] \
   --env="USERMAP_UID=$(id -u postgres)" --env="USERMAP_GID=$(id -g postgres)" \
   romeoz/postgresql
-```
-
-Upgrading
--------------------
-
-To upgrade to newer releases, simply follow this 3 step upgrade procedure.
-
-- **Step 1**: Stop the currently running image
-
-```bash
-docker stop postgresql
-```
-
-- **Step 2**: Update the docker image.
-
-```bash
-docker pull romeoz/postgresql
-```
-
-- **Step 3**: Start the image
-
-```bash
-docker run --name postgresql -d [OPTIONS] romeoz/postgresql
 ```
 
 Logging
@@ -308,6 +322,29 @@ Create the file /etc/logrotate.d/docker-containers with the following text insid
 }
 ```
 > Optionally, you can replace `nocompress` to `compress` and change the number of days.
+
+Upgrading
+-------------------
+
+To upgrade to newer releases, simply follow this 3 step upgrade procedure.
+
+- **Step 1**: Stop the currently running image
+
+```bash
+docker stop postgresql
+```
+
+- **Step 2**: Update the docker image.
+
+```bash
+docker pull romeoz/postgresql
+```
+
+- **Step 3**: Start the image
+
+```bash
+docker run --name postgresql -d [OPTIONS] romeoz/postgresql
+```
 
 Out of the box
 -------------------
