@@ -174,7 +174,7 @@ docker run --name='psql-master' -d \
   -e 'PG_MODE=master' -e 'PG_TRUST_LOCALNET=true' \
   -e 'REPLICATION_USER=replicator' -e 'REPLICATION_PASS=replicatorpass' \
   -e 'DB_NAME=dbname' -e 'DB_USER=dbuser' -e 'DB_PASS=dbpass' \
-  romeoz/postgresql
+  romeoz/docker-postgresql
 ```
 
 Next, create a temporary container for backup:
@@ -189,7 +189,7 @@ docker run -it --rm \
   -e 'REPLICATION_PASS=replicatorpass' \
   -e 'PG_TRUST_LOCALNET=true' \
   -v /host/to/path/backup:/tmp/backup \
-  romeoz/postgresql
+  romeoz/docker-postgresql
 ```  
 Archive will be available in the `/host/to/path/backup`.
 
@@ -202,11 +202,11 @@ Checking backup
 Check-data is the name of database `DB_NAME`. 
 
 ```bash
-docker run --name='backup-check' -it --rm \
+docker run -it --rm \
   -e 'PG_MODE=check_backup' \
   -e 'DB_NAME=foo' \
   -v /host/to/path/backup:/tmp/backup \
-  romeoz/postgresql
+  romeoz/docker-postgresql
 ```
 
 Default used the last backup. To modify, you must specify a environment variable `PG_BACKUP_FILENAME`.
@@ -218,7 +218,7 @@ Restore from backup
 docker run --name='db_restore' -d \
   -e 'PG_MODE=restore' \
   -v /host/to/path/backup:/tmp/backup \
-  romeoz/postgresql
+  romeoz/docker-postgresql
 ```
 
 For restore default  used the last backup. To modify, you must specify a environment variable `PG_BACKUP_FILENAME`.
@@ -231,7 +231,7 @@ Create a database named "foo":
 ```bash
 docker run --name db -d -e 'DB_NAME=foo' \
   -v /to/path/backup:/tmp/backup \
-  romeoz/postgresql
+  romeoz/docker-postgresql
 ```  
   
 Dumping database to /tmp/backup/:
@@ -246,13 +246,12 @@ Restore database:
 ```bash
 docker run --name restore_db -d \
   -v /to/path/backup:/tmp/backup \
-  romeoz/postgresql
+  romeoz/docker-postgresql
   
 docker exec -it restore_db bash -c \
   'lbzip2 -dc -n 2 /tmp/backup/backup.tar.bz2 | $(sudo -u postgres pg_restore --create --verbose -d template1)'  
 ``` 
 >Instead of volumes you can use the command `docker cp /to/path/backup/backup.tar.bz2 restore_db:/tmp/backup/backup.tar.bz2` (support Docker 1.8+).
-
 
 Enable Unaccent (Search plain text with accent)
 -------------------
@@ -264,7 +263,7 @@ By default unaccent is configure to `false`
 ```bash
 docker run --name postgresql -d \
   -e 'DB_UNACCENT=true' \
-  romeoz/postgresql
+  romeoz/docker-postgresql
 ```
 
 Host UID / GID Mapping
@@ -277,7 +276,7 @@ Also the container processes seem to be executed as the host's user/group `[what
 ```bash
 docker run --name=postgresql -it --rm [options] \
   --env="USERMAP_UID=$(id -u postgres)" --env="USERMAP_GID=$(id -g postgres)" \
-  romeoz/postgresql
+  romeoz/docker-postgresql
 ```
 
 Logging
@@ -337,13 +336,13 @@ docker stop postgresql
 - **Step 2**: Update the docker image.
 
 ```bash
-docker pull romeoz/postgresql
+docker pull romeoz/docker-postgresql
 ```
 
 - **Step 3**: Start the image
 
 ```bash
-docker run --name postgresql -d [OPTIONS] romeoz/postgresql
+docker run --name postgresql -d [OPTIONS] romeoz/docker-postgresql
 ```
 
 Out of the box
