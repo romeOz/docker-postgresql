@@ -1,6 +1,12 @@
 #!/bin/bash
 set -e
 
+PG_BACKUP_DIR=${PG_BACKUP_DIR:-"/tmp/backup"}
+PG_BACKUP_FILENAME=${PG_BACKUP_FILENAME:-"backup.last.tar.bz2"}
+PG_IMPORT=${PG_IMPORT:-}
+PG_CHECK=${PG_CHECK:-}
+BACKUP_OPTS=${BACKUP_OPTS:-}
+
 # set this env variable to true to enable a line in the
 # pg_hba.conf file to trust samenet.  this can be used to connect
 # from other containers on the same host without authentication
@@ -11,13 +17,12 @@ DB_USER=${DB_USER:-}
 DB_PASS=${DB_PASS:-}
 DB_UNACCENT=${DB_UNACCENT:false}
 
-# by default postgresql will start up as a standalone instance.
 # set this environment variable to master, slave or snapshot to use replication features.
 # "snapshot" will create a point in time backup of a master instance.
-PG_MODE=${PG_MODE:-standalone}
+PG_MODE=${PG_MODE:-}
 
-REPLICATION_USER=${REPLICATION_USER:-}
-REPLICATION_PASS=${REPLICATION_PASS:-}
+REPLICATION_USER=${REPLICATION_USER:-replica}
+REPLICATION_PASS=${REPLICATION_PASS:-replica}
 REPLICATION_HOST=${REPLICATION_HOST:-}
 REPLICATION_PORT=${REPLICATION_PORT:-5432}
 
@@ -62,14 +67,9 @@ create_run_dir() {
 }
 
 create_backup_dir() {
-  mkdir -p ${PG_BACKUP}/log/
-  chmod -R 0755 ${PG_BACKUP}
-  chown -R ${PG_USER}:${PG_USER} ${PG_BACKUP}
-}
-
-uncompress_backup(){
-  create_data_dir
-  sudo -Hu ${PG_USER} lbzip2 -dc -n 2 ${PG_BACKUP}/${PG_BACKUP_FILENAME} | tar -C ${PG_DATADIR} -x    
+  mkdir -p ${PG_BACKUP_DIR}/
+  chmod -R 0755 ${PG_BACKUP_DIR}
+  chown -R root:${PG_USER} ${PG_BACKUP_DIR}
 }
 
 rotate_backup()
@@ -78,20 +78,28 @@ rotate_backup()
   MONTH=$(date +"%b")
   let "INDEX = WEEK % 5"
   
-  test -e ${PG_BACKUP}/backup.${INDEX}.tar.bz2 && rm ${PG_BACKUP}/backup.${INDEX}.tar.bz2
-  mv ${PG_BACKUP}/backup.tar.bz2 ${PG_BACKUP}/backup.${INDEX}.tar.bz2
+  test -e ${PG_BACKUP_DIR}/backup.${INDEX}.tar.bz2 && rm ${PG_BACKUP_DIR}/backup.${INDEX}.tar.bz2
+  mv ${PG_BACKUP_DIR}/backup.tar.bz2 ${PG_BACKUP_DIR}/backup.${INDEX}.tar.bz2
 
-  test -e ${PG_BACKUP}/backup.${MONTH}.tar.bz2 && rm ${PG_BACKUP}/backup.${MONTH}.tar.bz2
-  ln ${PG_BACKUP}/backup.${INDEX}.tar.bz2 ${PG_BACKUP}/backup.${MONTH}.tar.bz2
+  test -e ${PG_BACKUP_DIR}/backup.${MONTH}.tar.bz2 && rm ${PG_BACKUP_DIR}/backup.${MONTH}.tar.bz2
+  ln ${PG_BACKUP_DIR}/backup.${INDEX}.tar.bz2 ${PG_BACKUP_DIR}/backup.${MONTH}.tar.bz2
 
-  test -e ${PG_BACKUP}/backup.last.tar.bz2 && rm ${PG_BACKUP}/backup.last.tar.bz2
-  ln ${PG_BACKUP}/backup.${INDEX}.tar.bz2 ${PG_BACKUP}/backup.last.tar.bz2   
+  test -e ${PG_BACKUP_DIR}/backup.last.tar.bz2 && rm ${PG_BACKUP_DIR}/backup.last.tar.bz2
+  ln ${PG_BACKUP_DIR}/backup.${INDEX}.tar.bz2 ${PG_BACKUP_DIR}/backup.last.tar.bz2
 }
 
-check_backup() {
-    echo "SELECT datname FROM pg_database WHERE lower(datname) = lower('${DB_NAME}');" | \
-  sudo -Hu ${PG_USER} ${PG_BINDIR}/postgres --single \
-    -D ${PG_DATADIR} -c config_file=${PG_CONFDIR}/postgresql.conf | cut -f 2 | head -n 5 | grep -w ${DB_NAME} | wc -l
+import_backup()
+{
+    FILE=$1
+    if [[ ${FILE} == default ]]; then
+        FILE="${PG_BACKUP_DIR}/${PG_BACKUP_FILENAME}"
+    fi
+    if [[ ! -f "${FILE}" ]]; then
+       echo "Unknown backup: ${FILE}"
+      exit 1
+    fi
+    create_data_dir
+    sudo -Hu ${PG_USER} lbzip2 -dc -n 2 ${FILE} | tar -C ${PG_DATADIR} -x
 }
 
 map_postgres_uid
@@ -131,7 +139,7 @@ host    all             all             0.0.0.0/0               md5
 EOF
 
 # allow replication connections to the database
-if [[ -n ${REPLICATION_USER} ]]; then
+if [[ ${PG_MODE} =~ ^master || ${PG_MODE} =~ ^slave ]]; then
   if [[ ${PG_SSLMODE} == disable ]]; then
     cat >> ${PG_CONFDIR}/pg_hba.conf <<EOF
 host    replication     $REPLICATION_USER       0.0.0.0/0               md5
@@ -143,7 +151,7 @@ EOF
   fi
 fi
 
-if [[ ${PG_MODE} == master ]]; then
+if [[ ${PG_MODE} =~ ^master || ${PG_MODE} == slave_backup ]]; then
   if [[ -n ${REPLICATION_USER} ]]; then
     echo "Supporting hot standby..."
     cat >> ${PG_CONFDIR}/postgresql.conf <<EOF
@@ -151,87 +159,115 @@ wal_level = hot_standby
 max_wal_senders = 3
 checkpoint_segments = 8
 wal_keep_segments = 8
+# recovery master
+#hot_standby = on
 EOF
   fi
 fi
 
-cd ${PG_HOME} 
+cd ${PG_HOME}
 
-# initialize PostgreSQL data directory
-if [[ ! -d ${PG_DATADIR} ]]; then
 
-  # Check backup
-  if [[ ${PG_MODE} == check_backup ]]; then   
+ # Export to backup
+if [[ ${PG_MODE} == backup ]]; then
+  echo "Backup database..."
 
-    if [[ -z ${DB_NAME} ]]; then
-      echo "Unknown database. DB_NAME does not null"
-      exit 1;
-    fi
-    if [[ -f "${PG_BACKUP}/${PG_BACKUP_FILENAME}" ]]; then
-      echo "Uncompress backup..."
-      uncompress_backup 
-  
-      echo "Check backup..."     
-      
-      if [[ $(check_backup) == 1 ]]; then
-        echo "Success checking backup"
-      else
-        echo "Fail checking backup: ${PG_BACKUP}/${PG_BACKUP_FILENAME}"
-        exit 1
-      fi      
-    else
-      echo "Unknown backup: ${PG_BACKUP}/${PG_BACKUP_FILENAME}"
-      exit 1
-    fi   
-    exit 0  
-  fi 
+  if [[ -d ${PG_DATADIR} ]]; then
+    echo 'Used host: local'
+    sudo -Hu ${PG_USER} \
+        ${PG_BINDIR}/pg_basebackup \
+        -w -x -v -P --format=t ${BACKUP_OPTS} \
+        -D - | lbzip2 -n 2 -9 > ${PG_BACKUP_DIR}/backup.tar.bz2
+  else
+    echo "Used host: ${REPLICATION_HOST}"
+    sudo -Hu ${PG_USER} \
+        PGPASSWORD=$REPLICATION_PASS ${PG_BINDIR}/pg_basebackup \
+        -h ${REPLICATION_HOST} -p ${REPLICATION_PORT} -U ${REPLICATION_USER} -w -x -v -P --format=t ${BACKUP_OPTS} \
+        -D - | lbzip2 -n 2 -9 > ${PG_BACKUP_DIR}/backup.tar.bz2
+  fi
+  rotate_backup
+  exit 0
+fi
 
-  # Import backup
-  if [[ ${PG_MODE} == restore ]]; then 
-      echo "Restore from backup...";
-      if [[ -f "${PG_BACKUP}/${PG_BACKUP_FILENAME}" ]]; then
-        echo "Uncompress backup..."
-        uncompress_backup
-      else
-        echo "Unknown backup: ${PG_BACKUP}/${PG_BACKUP_FILENAME}"
-        exit 1
-      fi
-  fi  
+ # Check backup
+if [[ -n ${PG_CHECK} ]]; then
 
-  if [[ ${PG_MODE} == slave || ${PG_MODE} == snapshot ]]; then
-    echo "Replicating database..."
-    if [[ ${PG_MODE} == snapshot ]]; then
-      sudo -Hu ${PG_USER} \
-        PGPASSWORD=$REPLICATION_PASS ${PG_BINDIR}/pg_basebackup -D ${PG_DATADIR} \
-        -h ${REPLICATION_HOST} -p ${REPLICATION_PORT} -U ${REPLICATION_USER} -w -x -v -P
-    elif [[ ${PG_MODE} == slave ]]; then
-      # Setup streaming replication.
-      sudo -Hu ${PG_USER} \
-        PGPASSWORD=$REPLICATION_PASS ${PG_BINDIR}/pg_basebackup -D ${PG_DATADIR} \
-        -h ${REPLICATION_HOST} -p ${REPLICATION_PORT} -U ${REPLICATION_USER} -w -v -P
-      echo "Setting up hot standby configuration..."
-      cat >> ${PG_CONFDIR}/postgresql.conf <<EOF
+  echo "Check backup..."
+  if [[ -z ${DB_NAME} ]]; then
+    echo "Unknown database. DB_NAME does not null"
+    exit 1;
+  fi
+
+  if [[ ! -d ${PG_DATADIR} ]]; then
+    import_backup ${PG_CHECK}
+  fi
+
+  CHECK=$(echo "SELECT datname FROM pg_database WHERE lower(datname) = lower('${DB_NAME}');" | \
+    sudo -Hu ${PG_USER} ${PG_BINDIR}/postgres --single \
+      -D ${PG_DATADIR} -c config_file=${PG_CONFDIR}/postgresql.conf)
+
+  if [[ $(echo ${CHECK} | grep -w ${DB_NAME} | wc -l) == 1 ]]; then
+    echo "Success checking backup"
+  else
+    echo "Fail checking backup"
+    exit 1
+  fi
+
+  exit 0
+fi
+
+# Import backup
+if [[ ! -d ${PG_DATADIR} && -n ${PG_IMPORT} ]]; then
+  if [[ -n ${PG_IMPORT} ]]; then
+      echo "Import backup..."
+      import_backup ${PG_IMPORT}
+  fi
+fi
+
+if [[ ! -d ${PG_DATADIR} && ${PG_MODE} == master_recovery ]]; then
+  sudo -Hu ${PG_USER} \
+    PGPASSWORD=$REPLICATION_PASS ${PG_BINDIR}/pg_basebackup -D ${PG_DATADIR} \
+    -h ${REPLICATION_HOST} -p ${REPLICATION_PORT} -U ${REPLICATION_USER} -w -x -v -P
+fi
+
+# Create snapshot
+if [[ ! -d ${PG_DATADIR} && ${PG_MODE} == snapshot ]]; then
+  echo "Snapshot database..."
+  sudo -Hu ${PG_USER} \
+    PGPASSWORD=$REPLICATION_PASS ${PG_BINDIR}/pg_basebackup -D ${PG_DATADIR} \
+    -h ${REPLICATION_HOST} -p ${REPLICATION_PORT} -U ${REPLICATION_USER} -w -X stream -v -P
+
+fi
+
+# Create slave
+if [[ ${PG_MODE} =~ ^slave ]]; then
+   echo "Replicating database..."
+  if [[ ! -d ${PG_DATADIR} ]]; then
+    # Setup streaming replication.
+    sudo -Hu ${PG_USER} \
+      PGPASSWORD=$REPLICATION_PASS ${PG_BINDIR}/pg_basebackup -D ${PG_DATADIR} \
+      -h ${REPLICATION_HOST} -p ${REPLICATION_PORT} -U ${REPLICATION_USER} -w -X stream -v -P
+  fi
+  echo "Setting up hot standby configuration..."
+  cat >> ${PG_CONFDIR}/postgresql.conf <<EOF
 hot_standby = on
 EOF
-      sudo -Hu ${PG_USER} touch ${PG_DATADIR}/recovery.conf
-      cat >> ${PG_DATADIR}/recovery.conf <<EOF
+  sudo -Hu ${PG_USER} touch ${PG_DATADIR}/recovery.conf
+  cat >> ${PG_DATADIR}/recovery.conf <<EOF
 standby_mode = 'on'
 primary_conninfo = 'host=${REPLICATION_HOST} port=${REPLICATION_PORT} user=${REPLICATION_USER} password=${REPLICATION_PASS} sslmode=${PG_SSLMODE}'
 trigger_file = '/tmp/postgresql.trigger'
 EOF
-    fi
+fi
 
-  else
+# Initializing database
+if [[ ! -d ${PG_DATADIR} ]]; then
+  # check if we need to perform data migration
+  PG_OLD_VERSION=$(find ${PG_HOME}/[0-9].[0-9]/main -maxdepth 1 -name PG_VERSION 2>/dev/null | sort -r | head -n1 | cut -d'/' -f5)
 
-    if [[ ! ${PG_MODE} == restore ]]; then 
-      # check if we need to perform data migration
-      PG_OLD_VERSION=$(find ${PG_HOME}/[0-9].[0-9]/main -maxdepth 1 -name PG_VERSION 2>/dev/null | sort -r | head -n1 | cut -d'/' -f5)
-
-      echo "Initializing database..."
-      sudo -Hu ${PG_USER} ${PG_BINDIR}/initdb --pgdata=${PG_DATADIR} \
-        --username=${PG_USER} --encoding=unicode --auth=trust >/dev/null
-    fi
-  fi
+  echo "Initializing database..."
+  sudo -Hu ${PG_USER} ${PG_BINDIR}/initdb --pgdata=${PG_DATADIR} \
+    --username=${PG_USER} --encoding=unicode --auth=trust >/dev/null
 fi
 
 if [[ -n ${PG_OLD_VERSION} ]]; then
@@ -259,21 +295,18 @@ if [[ -n ${PG_OLD_VERSION} ]]; then
     -O "-c config_file=${PG_CONFDIR}/postgresql.conf" >/dev/null
 fi
 
-# Hot standby (slave and snapshot) servers can ignore the following code.
-if [[ ${PG_MODE} == standalone || ${PG_MODE} == master ]]; then
-  if [[ -n ${REPLICATION_USER} ]]; then
-    if [[ -z ${REPLICATION_PASS} ]]; then
-      echo ""
-      echo "WARNING: "
-      echo "  Please specify a password for replication user \"${REPLICATION_USER}\". Skipping user creation..."
-      echo ""
-      DB_USER=
-    else
+# Create databases and users
+if [[ -z ${PG_MODE} || ${PG_MODE} =~ ^master ]]; then
+
+  if [[ ${PG_MODE} =~ ^master ]]; then
+      if [[ -f "${PG_DATADIR}/recovery.conf" ]]; then
+        echo "Remove file: '${PG_DATADIR}/recovery.conf'"
+        rm ${PG_DATADIR}/recovery.conf
+      fi
       echo "Creating user \"${REPLICATION_USER}\"..."
       echo "CREATE ROLE ${REPLICATION_USER} WITH REPLICATION LOGIN ENCRYPTED PASSWORD '${REPLICATION_PASS}';" |
         sudo -Hu ${PG_USER} ${PG_BINDIR}/postgres --single \
           -D ${PG_DATADIR} -c config_file=${PG_CONFDIR}/postgresql.conf >/dev/null
-    fi
   fi
 
   if [[ -n ${DB_USER} ]]; then
@@ -314,26 +347,6 @@ if [[ ${PG_MODE} == standalone || ${PG_MODE} == master ]]; then
       fi
     done
   fi
-fi
-
-# Export to backup
-if [[ ${PG_MODE} == backup ]]; then
-  if [[ -z ${REPLICATION_USER} || -z ${REPLICATION_PASS} ]]; then
-    echo ""
-    echo "WARNING: "
-    echo "  Please specify a username/password for backup. "
-    echo ""
-    exit 1;
-  fi  
-  echo "Backup database..."
-
-  sudo -Hu ${PG_USER} \
-      PGPASSWORD=$REPLICATION_PASS ${PG_BINDIR}/pg_basebackup \
-      -h ${REPLICATION_HOST} -p ${REPLICATION_PORT} -U ${REPLICATION_USER} -w -x -v -P --format=t \
-      -D - | lbzip2 -n 2 -9 > ${PG_BACKUP}/backup.tar.bz2
-
-  rotate_backup
-  exit 0     
 fi
 
 echo "Starting PostgreSQL server..."

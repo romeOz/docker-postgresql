@@ -7,13 +7,14 @@ Table of Contents
  * [Quick Start](#quick-start)
  * [Persistence](#persistence)
  * [Creating user and database](#creating-user-and-database-at-launch)
- * [Creating a Snapshot or Slave Database](#creating-a-snapshot-or-slave-database)
- * [Search plain text with accent](#enable-unaccent-search-plain-text-with-accent)
- * [Host UID / GID Mapping](#host-uid--gid-mapping)
+ * **[Replication - Master/Slave](#replication---masterslave)**
  * **[Backup of a PostgreSQL cluster](#backup-of-a-postgresql-cluster)**
  * **[Checking backup](#checking-backup)**
  * **[Restore from backup](#restore-from-backup)**
  * [Dumping database](#dumping-database)
+ * [Search plain text with accent](#enable-unaccent-search-plain-text-with-accent)
+ * [Host UID / GID Mapping](#host-uid--gid-mapping)
+ * [Environment variables](#environment-variables)
  * [Logging](#logging)
  * [Upgrading](#upgrading)
  * [Out of the box](#out-of-the-box)
@@ -134,8 +135,8 @@ This has the effect of adding the following to the `pg_hba.conf` file:
 host    all             all             samenet                 trust
 ```
 
-Creating a Snapshot or Slave Database
--------------------
+Replication - Master/Slave
+-------------------------
 
 You may use the `PG_MODE` variable along with `REPLICATION_HOST`, `REPLICATION_PORT`, `REPLICATION_USER` and `REPLICATION_PASS` to create a snapshot of an existing database and enable stream replication.
 
@@ -151,7 +152,19 @@ docker run --name='psql-master' -d \
   romeoz/postgresql
 ```
 
-Create a streaming replication instance
+or import backup
+
+```bash
+docker run --name='psql-master' -d \
+  -e 'PG_MODE=master' \
+  -e 'PG_IMPORT=default' \
+  -v /host/to/path/backup_master:/tmp/backup \
+  romeoz/docker-postgresql
+```
+
+>Can be used backup-master or backup-slave.
+
+Create a slave instance + fast import backup from master
 
 ```bash
 docker run --name='psql-slave' -d  \
@@ -159,7 +172,7 @@ docker run --name='psql-slave' -d  \
   -e 'PG_MODE=slave' -e 'PG_TRUST_LOCALNET=true' \
   -e 'REPLICATION_HOST=psql-master' -e 'REPLICATION_PORT=5432' \
   -e 'REPLICATION_USER=replicator' -e 'REPLICATION_PASS=replicatorpass' \
-  romeoz/postgresql
+  romeoz/docker-postgresql
 ```
 
 Backup of a PostgreSQL cluster
@@ -171,9 +184,9 @@ First we need to raise the master:
 
 ```bash
 docker run --name='psql-master' -d \
-  -e 'PG_MODE=master' -e 'PG_TRUST_LOCALNET=true' \
-  -e 'REPLICATION_USER=replicator' -e 'REPLICATION_PASS=replicatorpass' \
-  -e 'DB_NAME=dbname' -e 'DB_USER=dbuser' -e 'DB_PASS=dbpass' \
+  -e 'PG_MODE=master' \
+  -e 'DB_NAME=dbname' \
+  -e 'PG_TRUST_LOCALNET=true' \
   romeoz/docker-postgresql
 ```
 
@@ -184,9 +197,6 @@ docker run -it --rm \
   --link psql-master:psql-master \
   -e 'PG_MODE=backup' \
   -e 'REPLICATION_HOST=psql-master' \
-  -e 'REPLICATION_PORT=5432' \
-  -e 'REPLICATION_USER=replicator' \
-  -e 'REPLICATION_PASS=replicatorpass' \
   -e 'PG_TRUST_LOCALNET=true' \
   -v /host/to/path/backup:/tmp/backup \
   romeoz/docker-postgresql
@@ -195,6 +205,25 @@ Archive will be available in the `/host/to/path/backup`.
 
 > Algorithm: one backup per week (total 4), one backup per month (total 12) and the last backup. Example: `backup.last.tar.bz2`, `backup.1.tar.bz2` and `/backup.dec.tar.bz2`.
 
+ 	
+Backup slave requires that the slave was created with the WAL-settings.
+
+```bash
+docker run --name psql-slave -d \
+  --link psql-master:psql-master \
+  -e 'PG_MODE=slave_backup' -e 'PG_TRUST_LOCALNET=true' -e 'REPLICATION_HOST=psql-master' \
+  romeoz/docker-postgresql
+```
+
+Next, create a temporary container for backup:
+
+```bash
+docker run -it --rm \
+  --link psql-slave:psql-slave \
+  -e 'PG_MODE=backup' -e 'REPLICATION_HOST=psql-slave' 
+  -v -v /host/to/path/backup_slave:/tmp/backup \
+  romeoz/docker-postgresql
+```
 
 Checking backup
 -------------------
@@ -203,25 +232,25 @@ Check-data is the name of database `DB_NAME`.
 
 ```bash
 docker run -it --rm \
-  -e 'PG_MODE=check_backup' \
-  -e 'DB_NAME=foo' \
-  -v /host/to/path/backup:/tmp/backup \
-  romeoz/docker-postgresql
+    -e 'PG_CHECK=default' \
+    -e 'DB_NAME=foo' \
+    -v /host/to/path/backup:/tmp/backup \
+    romeoz/docker-postgresql
 ```
 
-Default used the last backup. To modify, you must specify a environment variable `PG_BACKUP_FILENAME`.
+Default used the `/tmp/backup/backup.last.bz2`.
 
 Restore from backup
 -------------------
 
 ```bash
 docker run --name='db_restore' -d \
-  -e 'PG_MODE=restore' \
+  -e 'PG_IMPORT=default' \
   -v /host/to/path/backup:/tmp/backup \
   romeoz/docker-postgresql
 ```
 
-For restore default  used the last backup. To modify, you must specify a environment variable `PG_BACKUP_FILENAME`.
+Also, see ["Replication"](replication---masterslave).
 
 Dumping database
 -------------------
@@ -278,6 +307,31 @@ docker run --name=postgresql -it --rm [options] \
   --env="USERMAP_UID=$(id -u postgres)" --env="USERMAP_GID=$(id -g postgres)" \
   romeoz/docker-postgresql
 ```
+
+Environment variables
+---------------------
+
+`PG_USER`: Set a specific username for the admin account (default "postgres").
+
+`REPLICATION_PORT`: Set a specific replication port for the master instance (default "5432").
+
+`REPLICATION_USER`: Set a specific replication username for the master instance (default "replica").
+
+`REPLICATION_PASS`: Set a specific replication password for the master instance (default "replica").
+
+`PG_TRUST_LOCALNET`: Sset this env variable to true to enable a line in the pg_hba.conf file to trust samenet. This can be used to connect from other containers on the same host without authentication (default "false").
+
+`PG_SSLMODE`: Set this env variable to "require" to enable encryption and "verify-full" for verification (default "disable").
+
+`PG_BACKUP_DIR`: Set a specific backup directory (default "/tmp/backup").
+
+`PG_BACKUP_FILENAME`: Set a specific filename backup (default "backup.last.bz2").
+
+`PG_IMPORT`: Defines one or more SQL scripts/dumps separated by spaces to initialize the database. Note that the scripts must be inside the container, so you may need to mount them. You can specify as `default` that is equivalent to the `/tmp/backup/backup.last.bz2`
+ 
+`PG_CHECK`: Defines one SQL script/dump to initialize the database. Note that the dump must be inside the container, so you may need to mount them. You can specify as `default` that is equivalent to the `/tmp/backup/backup.last.bz2`
+
+`PG_MODE`: Set a specific mode. Takes on the values `master`, `slave` or `backup`.
 
 Logging
 -------------------
@@ -348,7 +402,7 @@ docker run --name postgresql -d [OPTIONS] romeoz/docker-postgresql
 Out of the box
 -------------------
  * Ubuntu 14.04.3 (LTS)
- * PostgreSQL 9.4.4
+ * PostgreSQL 9.3/9.4
 
 License
 -------------------

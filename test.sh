@@ -26,7 +26,7 @@ docker run -it --rm -e 'PG_CHECK=default' -e 'DB_NAME=db' -v $(pwd)/vol94/backup
 echo ""
 echo "-- Clear"
 docker rm -f -v $(sudo docker ps -aq); sleep 5
-rm -r vol94*
+rm -rf vol94*
 
 
 echo ""
@@ -66,13 +66,14 @@ docker exec -it base_2 bash -c 'sudo -u postgres psql test_1 -c "SELECT COUNT(*)
 echo ""
 echo "-- Clear"
 docker rm -f -v $(sudo docker ps -aq); sleep 5
-rm -r vol94*
+rm -rf vol94*
 
 echo ""
 echo "--- Create master"
 docker run --name base_1 -d -e 'PG_MODE=master' -e 'DB_NAME=db_1,test_1' psg-9.4; sleep 10
 docker exec -it base_1 sudo -u postgres psql test_1 -c "CREATE TABLE foo (id SERIAL, name VARCHAR); INSERT INTO foo (name) VALUES ('Petr');"
 docker run --name base_2 -d --link base_1:base_1 -e 'PG_MODE=slave' -e 'PG_TRUST_LOCALNET=true' -e 'REPLICATION_HOST=base_1' psg-9.4; sleep 10
+docker exec -it base_1 sudo -u postgres psql test_1 -c "INSERT INTO foo (name) VALUES ('Chip');"; sleep 5
 echo ""
 echo "--- Create backup-slave"
 docker run --name base_3 -d --link base_1:base_1 -e 'PG_MODE=slave_backup' -e 'PG_TRUST_LOCALNET=true' -e 'REPLICATION_HOST=base_1' psg-9.4; sleep 10
@@ -84,13 +85,27 @@ echo ""
 echo "--- Restore slave from backup-slave"
 docker run --name base_4 -d --link base_1:base_1 -e 'PG_MODE=slave' -e 'PG_TRUST_LOCALNET=true' -e 'REPLICATION_HOST=base_1' -e 'PG_IMPORT=default'  -v $(pwd)/vol94/backup_slave:/tmp/backup psg-9.4; sleep 10
 docker exec -it base_1 sudo -u postgres psql test_1 -c "INSERT INTO foo (name) VALUES ('Jack');"; sleep 5
+docker exec -it base_4 bash -c 'sudo -u postgres psql test_1 -c "SELECT * FROM foo;"  | grep -c -w "Chip"'
 docker exec -it base_4 bash -c 'sudo -u postgres psql test_1 -c "SELECT * FROM foo;"  | grep -c -w "Jack"'
-docker exec -it base_4 bash -c 'sudo -u postgres psql test_1 -c "SELECT COUNT(*) FROM foo;" | grep -c -w "2"'
+docker exec -it base_4 bash -c 'sudo -u postgres psql test_1 -c "SELECT COUNT(*) FROM foo;" | grep -c -w "3"'
+echo ""
+echo "-- Clear"
+docker rm -f -v $(sudo docker ps -aq); sleep 5
+
+echo ""
+echo "--- Restore master from backup-slave"
+docker run --name base_1 -d -e 'PG_MODE=master' -e 'PG_IMPORT=default'  -v $(pwd)/vol94/backup_slave:/tmp/backup psg-9.4; sleep 10
+docker run --name base_2 -d --link base_1:base_1 -e 'PG_MODE=slave' -e 'PG_TRUST_LOCALNET=true' -e 'REPLICATION_HOST=base_1' psg-9.4; sleep 10
+docker exec -it base_1 sudo -u postgres psql test_1 -c "INSERT INTO foo (name) VALUES ('Tom');"; sleep 5
+docker exec -it base_2 bash -c 'sudo -u postgres psql test_1 -c "SELECT * FROM foo;"  | grep -c -w "Tom"'
+docker exec -it base_2 bash -c 'sudo -u postgres psql test_1 -c "SELECT * FROM foo;"  | grep -c -w "Chip"'
+docker exec -it base_2 bash -c 'sudo -u postgres psql test_1 -c "SELECT COUNT(*) FROM foo;" | grep -c -w "3"'
+
 echo ""
 echo "-- Clear"
 docker rm -f -v $(sudo docker ps -aq); sleep 5
 docker rmi psg-9.4
-rm -r vol94*
+rm -rf vol94*
 
 
 
@@ -120,7 +135,7 @@ docker run -it --rm -e 'PG_CHECK=default' -e 'DB_NAME=db' -v $(pwd)/vol93/backup
 echo ""
 echo "-- Clear"
 docker rm -f -v $(sudo docker ps -aq); sleep 5
-rm -r vol93*
+rm -rf vol93*
 
 
 echo ""
@@ -160,13 +175,14 @@ docker exec -it base_2 bash -c 'sudo -u postgres psql test_1 -c "SELECT COUNT(*)
 echo ""
 echo "-- Clear"
 docker rm -f -v $(sudo docker ps -aq); sleep 5
-rm -r vol93*
+rm -rf vol93*
 
 echo ""
 echo "--- Create master"
 docker run --name base_1 -d -e 'PG_MODE=master' -e 'DB_NAME=db_1,test_1' psg-9.3; sleep 10
 docker exec -it base_1 sudo -u postgres psql test_1 -c "CREATE TABLE foo (id SERIAL, name VARCHAR); INSERT INTO foo (name) VALUES ('Petr');"
 docker run --name base_2 -d --link base_1:base_1 -e 'PG_MODE=slave' -e 'PG_TRUST_LOCALNET=true' -e 'REPLICATION_HOST=base_1' psg-9.3; sleep 10
+docker exec -it base_1 sudo -u postgres psql test_1 -c "INSERT INTO foo (name) VALUES ('Chip');"; sleep 5
 echo ""
 echo "--- Create backup-slave"
 docker run --name base_3 -d --link base_1:base_1 -e 'PG_MODE=slave_backup' -e 'PG_TRUST_LOCALNET=true' -e 'REPLICATION_HOST=base_1' psg-9.3; sleep 10
@@ -178,13 +194,27 @@ echo ""
 echo "--- Restore slave from backup-slave"
 docker run --name base_4 -d --link base_1:base_1 -e 'PG_MODE=slave' -e 'PG_TRUST_LOCALNET=true' -e 'REPLICATION_HOST=base_1' -e 'PG_IMPORT=default'  -v $(pwd)/vol93/backup_slave:/tmp/backup psg-9.3; sleep 10
 docker exec -it base_1 sudo -u postgres psql test_1 -c "INSERT INTO foo (name) VALUES ('Jack');"; sleep 5
+docker exec -it base_4 bash -c 'sudo -u postgres psql test_1 -c "SELECT * FROM foo;"  | grep -c -w "Chip"'
 docker exec -it base_4 bash -c 'sudo -u postgres psql test_1 -c "SELECT * FROM foo;"  | grep -c -w "Jack"'
-docker exec -it base_4 bash -c 'sudo -u postgres psql test_1 -c "SELECT COUNT(*) FROM foo;" | grep -c -w "2"'
+docker exec -it base_4 bash -c 'sudo -u postgres psql test_1 -c "SELECT COUNT(*) FROM foo;" | grep -c -w "3"'
 echo ""
 echo "-- Clear"
 docker rm -f -v $(sudo docker ps -aq); sleep 5
-docker rmi psg-9.4
-rm -r vol93*
+
+echo ""
+echo "--- Restore master from backup-slave"
+docker run --name base_1 -d -e 'PG_MODE=master' -e 'PG_IMPORT=default'  -v $(pwd)/vol93/backup_slave:/tmp/backup psg-9.3; sleep 10
+docker run --name base_2 -d --link base_1:base_1 -e 'PG_MODE=slave' -e 'PG_TRUST_LOCALNET=true' -e 'REPLICATION_HOST=base_1' psg-9.3; sleep 10
+docker exec -it base_1 sudo -u postgres psql test_1 -c "INSERT INTO foo (name) VALUES ('Tom');"; sleep 5
+docker exec -it base_2 bash -c 'sudo -u postgres psql test_1 -c "SELECT * FROM foo;"  | grep -c -w "Tom"'
+docker exec -it base_2 bash -c 'sudo -u postgres psql test_1 -c "SELECT * FROM foo;"  | grep -c -w "Chip"'
+docker exec -it base_2 bash -c 'sudo -u postgres psql test_1 -c "SELECT COUNT(*) FROM foo;" | grep -c -w "3"'
+
+echo ""
+echo "-- Clear"
+docker rm -f -v $(sudo docker ps -aq); sleep 5
+docker rmi psg-9.3
+rm -rf vol93*
 
 echo ""
 echo "-- Done"
