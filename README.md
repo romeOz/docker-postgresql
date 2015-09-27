@@ -362,7 +362,7 @@ docker logs postgresql 2> -
 
 ####Rotate logs
 
-Create the file /etc/logrotate.d/docker-containers with the following text inside:
+Create the file `/etc/logrotate.d/docker-containers` with the following text inside:
 
 ```
 /var/lib/docker/containers/*/*.log {
