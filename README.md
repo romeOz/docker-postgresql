@@ -250,7 +250,7 @@ docker run --name='db_restore' -d \
   romeoz/docker-postgresql
 ```
 
-Also, see ["Replication"](replication---masterslave).
+Also, see ["Replication"](#replication---masterslave).
 
 Dumping database
 -------------------
