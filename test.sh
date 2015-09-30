@@ -72,10 +72,12 @@ echo ""
 echo "--- Create master"
 docker run --name base_1 -d -e 'PG_MODE=master' -e 'DB_NAME=db_1,test_1' psg-9.4; sleep 10
 docker exec -it base_1 sudo -u postgres psql test_1 -c "CREATE TABLE foo (id SERIAL, name VARCHAR); INSERT INTO foo (name) VALUES ('Petr');"
+echo ""
+echo "--- Create slave"
 docker run --name base_2 -d --link base_1:base_1 -e 'PG_MODE=slave' -e 'PG_TRUST_LOCALNET=true' -e 'REPLICATION_HOST=base_1' psg-9.4; sleep 10
 docker exec -it base_1 sudo -u postgres psql test_1 -c "INSERT INTO foo (name) VALUES ('Chip');"; sleep 5
 echo ""
-echo "--- Create backup-slave"
+echo "--- Create slave with WAL"
 docker run --name base_3 -d --link base_1:base_1 -e 'PG_MODE=slave_wal' -e 'PG_TRUST_LOCALNET=true' -e 'REPLICATION_HOST=base_1' psg-9.4; sleep 10
 
 echo ""
@@ -226,10 +228,12 @@ echo ""
 echo "--- Create master"
 docker run --name base_1 -d -e 'PG_MODE=master' -e 'DB_NAME=db_1,test_1' psg-9.3; sleep 10
 docker exec -it base_1 sudo -u postgres psql test_1 -c "CREATE TABLE foo (id SERIAL, name VARCHAR); INSERT INTO foo (name) VALUES ('Petr');"
+echo ""
+echo "--- Create slave"
 docker run --name base_2 -d --link base_1:base_1 -e 'PG_MODE=slave' -e 'PG_TRUST_LOCALNET=true' -e 'REPLICATION_HOST=base_1' psg-9.3; sleep 10
 docker exec -it base_1 sudo -u postgres psql test_1 -c "INSERT INTO foo (name) VALUES ('Chip');"; sleep 5
 echo ""
-echo "--- Create backup-slave"
+echo "--- Create slave with WAL"
 docker run --name base_3 -d --link base_1:base_1 -e 'PG_MODE=slave_wal' -e 'PG_TRUST_LOCALNET=true' -e 'REPLICATION_HOST=base_1' psg-9.3; sleep 10
 
 echo ""
