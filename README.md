@@ -70,7 +70,7 @@ The updated run command looks like this.
 
 ```bash
 docker run --name postgresql -d \
-  -v /host/to/path/data:/var/lib/postgresql romeoz/postgresql
+  -v /host/to/path/data:/var/lib/postgresql romeoz/docker-postgresql
 ```
 
 This will make sure that the data stored in the database is not lost when the image is stopped and started again.
@@ -85,7 +85,7 @@ To create a new user you should specify the `DB_USER` and `DB_PASS` variables. T
 ```bash
 docker run --name postgresql -d \
   -e 'DB_USER=dbuser' -e 'DB_PASS=dbpass' \
-  romeoz/postgresql
+  romeoz/docker-postgresql
 ```
 
 **NOTE**
@@ -96,7 +96,7 @@ Similarly, you can also create a new database by specifying the database name in
 
 ```bash
 docker run --name postgresql -d \
-  -e 'DB_NAME=dbname' romeoz/postgresql
+  -e 'DB_NAME=dbname' romeoz/docker-postgresql
 ```
 
 You may also specify a comma separated list of database names in the `DB_NAME` variable. The following command creates two new databases named *dbname1* and *dbname2* (p.s. this feature is only available in releases greater than 9.1-1).
@@ -104,7 +104,7 @@ You may also specify a comma separated list of database names in the `DB_NAME` v
 ```bash
 docker run --name postgresql -d \
   -e 'DB_NAME=dbname1,dbname2' \
-  romeoz/postgresql
+  romeoz/docker-postgresql
 ```
 
 If the `DB_USER` and `DB_PASS` variables are also specified while creating the database, then the user is granted access to the database(s).
@@ -114,7 +114,7 @@ For example,
 ```bash
 docker run --name postgresql -d \
   -e 'DB_USER=dbuser' -e 'DB_PASS=dbpass' -e 'DB_NAME=dbname' \
-  romeoz/postgresql
+  romeoz/docker-postgresql
 ```
 
 will create a user *dbuser* with the password *dbpass*. It will also create a database named *dbname* and the *dbuser* user will have full access to the *dbname* database.
@@ -126,7 +126,7 @@ For example,
 ```bash
 docker run --name postgresql -d \
   -e 'PG_TRUST_LOCALNET=true' \
-  romeoz/postgresql
+  romeoz/docker-postgresql
 ```
 
 This has the effect of adding the following to the `pg_hba.conf` file:
@@ -149,7 +149,7 @@ docker run --name='psql-master' -d \
   -e 'PG_MODE=master' -e 'PG_TRUST_LOCALNET=true' \
   -e 'REPLICATION_USER=replicator' -e 'REPLICATION_PASS=replicatorpass' \
   -e 'DB_NAME=dbname' -e 'DB_USER=dbuser' -e 'DB_PASS=dbpass' \
-  romeoz/postgresql
+  romeoz/docker-postgresql
 ```
 
 Create a slave instance + fast import backup from master
