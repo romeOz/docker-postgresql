@@ -6,6 +6,9 @@ PG_BACKUP_FILENAME=${PG_BACKUP_FILENAME:-"backup.last.tar.bz2"}
 PG_IMPORT=${PG_IMPORT:-}
 PG_CHECK=${PG_CHECK:-}
 BACKUP_OPTS=${BACKUP_OPTS:-}
+PG_WAL_SEGMENTS=${PG_WAL_SEGMENTS:-8}
+PG_CHECKPOINT_SEGMENTS=${PG_CHECKPOINT_SEGMENTS:-8}
+PG_MAX_WAL_SENDERS=${PG_MAX_WAL_SENDERS:-3}
 
 # set this env variable to true to enable a line in the
 # pg_hba.conf file to trust samenet.  this can be used to connect
@@ -151,16 +154,14 @@ EOF
   fi
 fi
 
-if [[ ${PG_MODE} =~ ^master || ${PG_MODE} == slave_backup ]]; then
+if [[ ${PG_MODE} =~ ^master || ${PG_MODE} == slave_wal ]]; then
   if [[ -n ${REPLICATION_USER} ]]; then
     echo "Supporting hot standby..."
     cat >> ${PG_CONFDIR}/postgresql.conf <<EOF
 wal_level = hot_standby
-max_wal_senders = 3
-checkpoint_segments = 8
-wal_keep_segments = 8
-# recovery master
-#hot_standby = on
+max_wal_senders = ${PG_MAX_WAL_SENDERS}
+checkpoint_segments = ${PG_CHECKPOINT_SEGMENTS}
+wal_keep_segments = ${PG_WAL_SEGMENTS}
 EOF
   fi
 fi

@@ -10,7 +10,7 @@ Table of Contents
  * **[Replication - Master/Slave](#replication---masterslave)**
  * **[Backup of a PostgreSQL cluster](#backup-of-a-postgresql-cluster)**
  * **[Checking backup](#checking-backup)**
- * **[Restore from backup](#restore-from-backup)**
+ * **[Recovery from backup](#recovery-from-backup)**
  * [Dumping database](#dumping-database)
  * [Search plain text with accent](#enable-unaccent-search-plain-text-with-accent)
  * [Host UID / GID Mapping](#host-uid--gid-mapping)
@@ -194,14 +194,16 @@ Archive will be available in the `/host/to/path/backup`.
 > Algorithm: one backup per week (total 4), one backup per month (total 12) and the last backup. Example: `backup.last.tar.bz2`, `backup.1.tar.bz2` and `/backup.dec.tar.bz2`.
 
  	
-Backup slave requires that the slave was created with the WAL-settings.
+Backuping slave requires that the slave was created with the WAL-settings.
 
 ```bash
 docker run --name psql-slave -d \
   --link psql-master:psql-master \
-  -e 'PG_MODE=slave_backup' -e 'PG_TRUST_LOCALNET=true' -e 'REPLICATION_HOST=psql-master' \
+  -e 'PG_MODE=slave_wal' -e 'PG_TRUST_LOCALNET=true' -e 'REPLICATION_HOST=psql-master' \
   romeoz/docker-postgresql
 ```
+
+>So, you can used for recovering master
 
 Next, create a temporary container for backup:
 
@@ -228,8 +230,10 @@ docker run -it --rm \
 
 Default used the `/tmp/backup/backup.last.bz2`.
 
-Restore from backup
+Recovery from backup
 -------------------
+
+###Recovery from backup file
 
 ```bash
 docker run --name='psql-master' -d \
@@ -239,7 +243,28 @@ docker run --name='psql-master' -d \
   romeoz/docker-postgresql
 ```
 
->Can be used backup-master or backup-slave.
+or for slave
+
+```bash
+docker run --name='psql-slave' -d \
+  -e 'PG_MODE=slave' \
+  -e 'PG_IMPORT=default' \
+  -v /host/to/path/backup_master:/tmp/backup \
+  romeoz/docker-postgresql
+```
+
+>Can be used files backup-master or backup-slave.
+
+###Recovery master from slave with WAL
+
+```bash
+docker run --name master -d \
+  --link slave_wal:slave_wal \
+  -e 'PG_MODE=master_recovery' \
+  -e 'PG_TRUST_LOCALNET=true' -e 'REPLICATION_HOST=slave_wal' \
+  romeoz/docker-postgresql
+```
+
 
 Dumping database
 -------------------
