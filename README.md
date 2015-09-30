@@ -333,7 +333,7 @@ Environment variables
 
 `REPLICATION_PASS`: Set a specific replication password for the master instance (default "replica").
 
-`PG_TRUST_LOCALNET`: Sset this env variable to true to enable a line in the pg_hba.conf file to trust samenet. This can be used to connect from other containers on the same host without authentication (default "false").
+`PG_TRUST_LOCALNET`: Set this env variable to true to enable a line in the pg_hba.conf file to trust samenet. This can be used to connect from other containers on the same host without authentication (default "false").
 
 `PG_SSLMODE`: Set this env variable to "require" to enable encryption and "verify-full" for verification (default "disable").
 
@@ -346,6 +346,8 @@ Environment variables
 `PG_CHECK`: Defines one SQL script/dump to initialize the database. Note that the dump must be inside the container, so you may need to mount them. You can specify as `default` that is equivalent to the `/tmp/backup/backup.last.bz2`
 
 `PG_MODE`: Set a specific mode. Takes on the values `master`, `slave` or `backup`.
+
+`PG_ROTATE_BACKUP`: Determines whether to use the rotation of backups (default "true").
 
 Logging
 -------------------
