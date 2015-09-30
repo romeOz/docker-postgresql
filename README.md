@@ -15,8 +15,7 @@ Table of Contents
  * [Search plain text with accent](#enable-unaccent-search-plain-text-with-accent)
  * [Host UID / GID Mapping](#host-uid--gid-mapping)
  * [Environment variables](#environment-variables)
- * [Logging](#logging)
- * [Upgrading](#upgrading)
+ * [Logging](#logging) 
  * [Out of the box](#out-of-the-box)
  
 > Bolded features are different from [sameersbn/docker-postgresql](https://github.com/sameersbn/docker-postgresql).
@@ -391,29 +390,6 @@ Create the file `/etc/logrotate.d/docker-containers` with the following text ins
 }
 ```
 > Optionally, you can replace `nocompress` to `compress` and change the number of days.
-
-Upgrading
--------------------
-
-To upgrade to newer releases, simply follow this 3 step upgrade procedure.
-
-- **Step 1**: Stop the currently running image
-
-```bash
-docker stop postgresql
-```
-
-- **Step 2**: Update the docker image.
-
-```bash
-docker pull romeoz/docker-postgresql
-```
-
-- **Step 3**: Start the image
-
-```bash
-docker run --name postgresql -d [OPTIONS] romeoz/docker-postgresql
-```
 
 Out of the box
 -------------------
