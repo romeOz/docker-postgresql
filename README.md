@@ -152,18 +152,6 @@ docker run --name='psql-master' -d \
   romeoz/postgresql
 ```
 
-or import backup
-
-```bash
-docker run --name='psql-master' -d \
-  -e 'PG_MODE=master' \
-  -e 'PG_IMPORT=default' \
-  -v /host/to/path/backup_master:/tmp/backup \
-  romeoz/docker-postgresql
-```
-
->Can be used backup-master or backup-slave.
-
 Create a slave instance + fast import backup from master
 
 ```bash
@@ -244,13 +232,14 @@ Restore from backup
 -------------------
 
 ```bash
-docker run --name='db_restore' -d \
+docker run --name='psql-master' -d \
+  -e 'PG_MODE=master' \
   -e 'PG_IMPORT=default' \
-  -v /host/to/path/backup:/tmp/backup \
+  -v /host/to/path/backup_master:/tmp/backup \
   romeoz/docker-postgresql
 ```
 
-Also, see ["Replication"](#replication---masterslave).
+>Can be used backup-master or backup-slave.
 
 Dumping database
 -------------------
