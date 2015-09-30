@@ -104,9 +104,54 @@ docker exec -it base_2 bash -c 'sudo -u postgres psql test_1 -c "SELECT COUNT(*)
 echo ""
 echo "-- Clear"
 docker rm -f -v $(sudo docker ps -aq); sleep 5
-docker rmi psg-9.4
 rm -rf vol94*
 
+echo ""
+echo ""
+echo "-- Testing failover master on PostgreSQL 9.4"
+echo ""
+echo "--- Create master"
+docker run --name master -d -e 'PG_MODE=master' -e 'DB_NAME=db_1,test_1' psg-9.4; sleep 10
+echo ""
+echo "--- Create slaves"
+docker run --name slave_1 -d --link master:master -e 'PG_MODE=slave' -e 'PG_TRUST_LOCALNET=true' -e 'REPLICATION_HOST=master' psg-9.4; sleep 10
+docker run --name slave_2 -d --link master:master -e 'PG_MODE=slave_wal' -e 'PG_TRUST_LOCALNET=true' -e 'REPLICATION_HOST=master' psg-9.4; sleep 10
+docker exec -it master sudo -u postgres psql test_1 -c "CREATE TABLE foo (id SERIAL, name VARCHAR); INSERT INTO foo (name) VALUES ('Petr');"; sleep 5
+echo ""
+echo "--- Remove master"
+docker rm -f -v master; sleep 5
+
+echo ""
+echo "--- Apply trigger"
+docker exec -it slave_2 touch /tmp/postgresql.trigger; sleep 10
+docker exec -it slave_2 sudo -u postgres psql test_1 -c "INSERT INTO foo (name) VALUES ('Bob');"; sleep 5
+
+echo ""
+echo "--- Recovery master"
+docker run --name master -d --link slave_2:slave_2 -e 'PG_MODE=master_recovery' -e 'PG_TRUST_LOCALNET=true' -e 'REPLICATION_HOST=slave_2' psg-9.4; sleep 10
+
+echo ""
+echo "--- Remove slaves"
+docker rm -f -v slave_1; sleep 5
+docker rm -f -v slave_2; sleep 5
+
+echo ""
+echo "--- Create slaves"
+docker run --name slave_1 -d --link master:master -e 'PG_MODE=slave' -e 'PG_TRUST_LOCALNET=true' -e 'REPLICATION_HOST=master' psg-9.4; sleep 10
+docker run --name slave_2 -d --link master:master -e 'PG_MODE=slave_wal' -e 'PG_TRUST_LOCALNET=true' -e 'REPLICATION_HOST=master' psg-9.4; sleep 10
+docker exec -it master sudo -u postgres psql test_1 -c "INSERT INTO foo (name) VALUES ('Linda');"; sleep 5
+
+echo ""
+echo "--- Cheking data"
+docker exec -it slave_1 bash -c 'sudo -u postgres psql test_1 -c "SELECT * FROM foo;"  | grep -c -w "Linda"'
+docker exec -it slave_1 bash -c 'sudo -u postgres psql test_1 -c "SELECT COUNT(*) FROM foo;" | grep -c -w "3"'
+docker exec -it slave_2 bash -c 'sudo -u postgres psql test_1 -c "SELECT * FROM foo;"  | grep -c -w "Bob"'
+docker exec -it slave_2 bash -c 'sudo -u postgres psql test_1 -c "SELECT COUNT(*) FROM foo;" | grep -c -w "3"'
+
+echo ""
+echo "-- Clear"
+docker rm -f -v $(sudo docker ps -aq); sleep 5
+docker rmi psg-9.4
 
 
 echo ""
@@ -209,6 +254,53 @@ docker exec -it base_1 sudo -u postgres psql test_1 -c "INSERT INTO foo (name) V
 docker exec -it base_2 bash -c 'sudo -u postgres psql test_1 -c "SELECT * FROM foo;"  | grep -c -w "Tom"'
 docker exec -it base_2 bash -c 'sudo -u postgres psql test_1 -c "SELECT * FROM foo;"  | grep -c -w "Chip"'
 docker exec -it base_2 bash -c 'sudo -u postgres psql test_1 -c "SELECT COUNT(*) FROM foo;" | grep -c -w "3"'
+
+echo ""
+echo "-- Clear"
+docker rm -f -v $(sudo docker ps -aq); sleep 5
+rm -rf vol93*
+
+echo ""
+echo ""
+echo "-- Testing failover master on PostgreSQL 9.3"
+echo ""
+echo "--- Create master"
+docker run --name master -d -e 'PG_MODE=master' -e 'DB_NAME=db_1,test_1' psg-9.3; sleep 10
+echo ""
+echo "--- Create slaves"
+docker run --name slave_1 -d --link master:master -e 'PG_MODE=slave' -e 'PG_TRUST_LOCALNET=true' -e 'REPLICATION_HOST=master' psg-9.3; sleep 10
+docker run --name slave_2 -d --link master:master -e 'PG_MODE=slave_wal' -e 'PG_TRUST_LOCALNET=true' -e 'REPLICATION_HOST=master' psg-9.3; sleep 10
+docker exec -it master sudo -u postgres psql test_1 -c "CREATE TABLE foo (id SERIAL, name VARCHAR); INSERT INTO foo (name) VALUES ('Petr');"; sleep 5
+echo ""
+echo "--- Remove master"
+docker rm -f -v master; sleep 5
+
+echo ""
+echo "--- Apply trigger"
+docker exec -it slave_2 touch /tmp/postgresql.trigger; sleep 10
+docker exec -it slave_2 sudo -u postgres psql test_1 -c "INSERT INTO foo (name) VALUES ('Bob');"; sleep 5
+
+echo ""
+echo "--- Recovery master"
+docker run --name master -d --link slave_2:slave_2 -e 'PG_MODE=master_recovery' -e 'PG_TRUST_LOCALNET=true' -e 'REPLICATION_HOST=slave_2' psg-9.3; sleep 10
+
+echo ""
+echo "--- Remove slaves"
+docker rm -f -v slave_1; sleep 5
+docker rm -f -v slave_2; sleep 5
+
+echo ""
+echo "--- Create slaves"
+docker run --name slave_1 -d --link master:master -e 'PG_MODE=slave' -e 'PG_TRUST_LOCALNET=true' -e 'REPLICATION_HOST=master' psg-9.3; sleep 10
+docker run --name slave_2 -d --link master:master -e 'PG_MODE=slave_wal' -e 'PG_TRUST_LOCALNET=true' -e 'REPLICATION_HOST=master' psg-9.3; sleep 10
+docker exec -it master sudo -u postgres psql test_1 -c "INSERT INTO foo (name) VALUES ('Linda');"; sleep 5
+
+echo ""
+echo "--- Cheking data"
+docker exec -it slave_1 bash -c 'sudo -u postgres psql test_1 -c "SELECT * FROM foo;"  | grep -c -w "Linda"'
+docker exec -it slave_1 bash -c 'sudo -u postgres psql test_1 -c "SELECT COUNT(*) FROM foo;" | grep -c -w "3"'
+docker exec -it slave_2 bash -c 'sudo -u postgres psql test_1 -c "SELECT * FROM foo;"  | grep -c -w "Bob"'
+docker exec -it slave_2 bash -c 'sudo -u postgres psql test_1 -c "SELECT COUNT(*) FROM foo;" | grep -c -w "3"'
 
 echo ""
 echo "-- Clear"
