@@ -6,6 +6,10 @@ PG_BACKUP_FILENAME=${PG_BACKUP_FILENAME:-"backup.last.tar.bz2"}
 PG_IMPORT=${PG_IMPORT:-}
 PG_CHECK=${PG_CHECK:-}
 BACKUP_OPTS=${BACKUP_OPTS:-}
+PG_WAL_SEGMENTS=${PG_WAL_SEGMENTS:-8}
+PG_CHECKPOINT_SEGMENTS=${PG_CHECKPOINT_SEGMENTS:-8}
+PG_MAX_WAL_SENDERS=${PG_MAX_WAL_SENDERS:-3}
+PG_ROTATE_BACKUP=${PG_ROTATE_BACKUP:-true}
 
 # set this env variable to true to enable a line in the
 # pg_hba.conf file to trust samenet.  this can be used to connect
@@ -74,18 +78,32 @@ create_backup_dir() {
 
 rotate_backup()
 {
-  WEEK=$(date +"%V")
-  MONTH=$(date +"%b")
-  let "INDEX = WEEK % 5"
-  
-  test -e ${PG_BACKUP_DIR}/backup.${INDEX}.tar.bz2 && rm ${PG_BACKUP_DIR}/backup.${INDEX}.tar.bz2
-  mv ${PG_BACKUP_DIR}/backup.tar.bz2 ${PG_BACKUP_DIR}/backup.${INDEX}.tar.bz2
+  echo "Rotate backup..."
 
-  test -e ${PG_BACKUP_DIR}/backup.${MONTH}.tar.bz2 && rm ${PG_BACKUP_DIR}/backup.${MONTH}.tar.bz2
-  ln ${PG_BACKUP_DIR}/backup.${INDEX}.tar.bz2 ${PG_BACKUP_DIR}/backup.${MONTH}.tar.bz2
+  if [[ ${PG_ROTATE_BACKUP} == true ]]; then
 
-  test -e ${PG_BACKUP_DIR}/backup.last.tar.bz2 && rm ${PG_BACKUP_DIR}/backup.last.tar.bz2
-  ln ${PG_BACKUP_DIR}/backup.${INDEX}.tar.bz2 ${PG_BACKUP_DIR}/backup.last.tar.bz2
+    WEEK=$(date +"%V")
+    MONTH=$(date +"%b")
+    let "INDEX = WEEK % 5" || true
+    if [[ ${INDEX} == 0  ]]; then
+      INDEX=4
+    fi
+
+    test -e ${PG_BACKUP_DIR}/backup.${INDEX}.tar.bz2 && rm ${PG_BACKUP_DIR}/backup.${INDEX}.tar.bz2
+    mv ${PG_BACKUP_DIR}/backup.tar.bz2 ${PG_BACKUP_DIR}/backup.${INDEX}.tar.bz2
+    echo "Create backup file: ${PG_BACKUP_DIR}/backup.${INDEX}.tar.bz2"
+
+    test -e ${PG_BACKUP_DIR}/backup.${MONTH}.tar.bz2 && rm ${PG_BACKUP_DIR}/backup.${MONTH}.tar.bz2
+    ln ${PG_BACKUP_DIR}/backup.${INDEX}.tar.bz2 ${PG_BACKUP_DIR}/backup.${MONTH}.tar.bz2
+    echo "Create backup file: ${PG_BACKUP_DIR}/backup.${MONTH}.tar.bz2"
+
+    test -e ${PG_BACKUP_DIR}/backup.last.tar.bz2 && rm ${PG_BACKUP_DIR}/backup.last.tar.bz2
+    ln ${PG_BACKUP_DIR}/backup.${INDEX}.tar.bz2 ${PG_BACKUP_DIR}/backup.last.tar.bz2
+    echo "Create backup file: ${PG_BACKUP_DIR}/backup.last.tar.bz2"
+  else
+    mv ${PG_BACKUP_DIR}/backup.tar.bz2 ${PG_BACKUP_DIR}/backup.last.tar.bz2
+        echo "Create backup file: ${PG_BACKUP_DIR}/backup.last.tar.bz2"
+  fi
 }
 
 import_backup()
@@ -100,6 +118,14 @@ import_backup()
     fi
     create_data_dir
     sudo -Hu ${PG_USER} lbzip2 -dc -n 2 ${FILE} | tar -C ${PG_DATADIR} -x
+}
+
+remove_recovery_file()
+{
+  if [[ -f "${PG_DATADIR}/recovery.conf" ]]; then
+    echo "Remove file: '${PG_DATADIR}/recovery.conf'"
+    rm ${PG_DATADIR}/recovery.conf
+  fi
 }
 
 map_postgres_uid
@@ -151,16 +177,14 @@ EOF
   fi
 fi
 
-if [[ ${PG_MODE} =~ ^master || ${PG_MODE} == slave_backup ]]; then
+if [[ ${PG_MODE} =~ ^master || ${PG_MODE} == slave_wal ]]; then
   if [[ -n ${REPLICATION_USER} ]]; then
     echo "Supporting hot standby..."
     cat >> ${PG_CONFDIR}/postgresql.conf <<EOF
 wal_level = hot_standby
-max_wal_senders = 3
-checkpoint_segments = 8
-wal_keep_segments = 8
-# recovery master
-#hot_standby = on
+max_wal_senders = ${PG_MAX_WAL_SENDERS}
+checkpoint_segments = ${PG_CHECKPOINT_SEGMENTS}
+wal_keep_segments = ${PG_WAL_SEGMENTS}
 EOF
   fi
 fi
@@ -201,7 +225,7 @@ if [[ -n ${PG_CHECK} ]]; then
   if [[ ! -d ${PG_DATADIR} ]]; then
     import_backup ${PG_CHECK}
   fi
-
+  remove_recovery_file
   CHECK=$(echo "SELECT datname FROM pg_database WHERE lower(datname) = lower('${DB_NAME}');" | \
     sudo -Hu ${PG_USER} ${PG_BINDIR}/postgres --single \
       -D ${PG_DATADIR} -c config_file=${PG_CONFDIR}/postgresql.conf)
@@ -299,10 +323,7 @@ fi
 if [[ -z ${PG_MODE} || ${PG_MODE} =~ ^master ]]; then
 
   if [[ ${PG_MODE} =~ ^master ]]; then
-      if [[ -f "${PG_DATADIR}/recovery.conf" ]]; then
-        echo "Remove file: '${PG_DATADIR}/recovery.conf'"
-        rm ${PG_DATADIR}/recovery.conf
-      fi
+      remove_recovery_file
       echo "Creating user \"${REPLICATION_USER}\"..."
       echo "CREATE ROLE ${REPLICATION_USER} WITH REPLICATION LOGIN ENCRYPTED PASSWORD '${REPLICATION_PASS}';" |
         sudo -Hu ${PG_USER} ${PG_BINDIR}/postgres --single \
