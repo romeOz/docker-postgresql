@@ -137,57 +137,61 @@ create_backup_dir
 # fix ownership of ${PG_CONFDIR} (may be necessary if USERMAP_* was set)
 chown -R ${PG_USER}:${PG_USER} ${PG_CONFDIR}
 
-if [[ ${PG_SSLMODE} == disable ]]; then
-  sed 's/ssl = true/#ssl = true/' -i ${PG_CONFDIR}/postgresql.conf
-fi
+if [[ ! -f /tmp/configure_1  ]]; then
+  if [[ ${PG_SSLMODE} == disable ]]; then
+    sed 's/ssl = true/#ssl = true/' -i ${PG_CONFDIR}/postgresql.conf
+  fi
 
-# Change DSM from `posix' to `sysv' if we are inside an lx-brand container
-if [[ $(uname -v) == "BrandZ virtual linux" ]]; then
-  sed 's/\(dynamic_shared_memory_type = \)posix/\1sysv/' \
-    -i ${PG_CONFDIR}/postgresql.conf
-fi
+  # Change DSM from `posix' to `sysv' if we are inside an lx-brand container
+  if [[ $(uname -v) == "BrandZ virtual linux" ]]; then
+    sed 's/\(dynamic_shared_memory_type = \)posix/\1sysv/' \
+      -i ${PG_CONFDIR}/postgresql.conf
+  fi
 
-# listen on all interfaces
-cat >> ${PG_CONFDIR}/postgresql.conf <<EOF
+  # listen on all interfaces
+  cat >> ${PG_CONFDIR}/postgresql.conf <<EOF
 listen_addresses = '*'
 EOF
 
-if [[ ${PG_TRUST_LOCALNET} == true ]]; then
-  echo "Enabling trust samenet in pg_hba.conf..."
-  cat >> ${PG_CONFDIR}/pg_hba.conf <<EOF
+  if [[ ${PG_TRUST_LOCALNET} == true ]]; then
+    echo "Enabling trust samenet in pg_hba.conf..."
+    cat >> ${PG_CONFDIR}/pg_hba.conf <<EOF
 host    all             all             samenet                 trust
 EOF
-fi
+  fi
 
-# allow remote connections to postgresql database
-cat >> ${PG_CONFDIR}/pg_hba.conf <<EOF
+  # allow remote connections to postgresql database
+  cat >> ${PG_CONFDIR}/pg_hba.conf <<EOF
 host    all             all             0.0.0.0/0               md5
 EOF
 
-# allow replication connections to the database
-if [[ ${PG_MODE} =~ ^master || ${PG_MODE} =~ ^slave ]]; then
-  if [[ ${PG_SSLMODE} == disable ]]; then
-    cat >> ${PG_CONFDIR}/pg_hba.conf <<EOF
+  # allow replication connections to the database
+  if [[ ${PG_MODE} =~ ^master || ${PG_MODE} =~ ^slave ]]; then
+    if [[ ${PG_SSLMODE} == disable ]]; then
+      cat >> ${PG_CONFDIR}/pg_hba.conf <<EOF
 host    replication     $REPLICATION_USER       0.0.0.0/0               md5
 EOF
-  else
-    cat >> ${PG_CONFDIR}/pg_hba.conf <<EOF
+    else
+      cat >> ${PG_CONFDIR}/pg_hba.conf <<EOF
 hostssl replication     $REPLICATION_USER       0.0.0.0/0               md5
 EOF
+    fi
   fi
-fi
 
-if [[ ${PG_MODE} =~ ^master || ${PG_MODE} == slave_wal ]]; then
-  if [[ -n ${REPLICATION_USER} ]]; then
-    echo "Supporting hot standby..."
-    cat >> ${PG_CONFDIR}/postgresql.conf <<EOF
+  if [[ ${PG_MODE} =~ ^master || ${PG_MODE} == slave_wal ]]; then
+    if [[ -n ${REPLICATION_USER} ]]; then
+      echo "Supporting hot standby..."
+      cat >> ${PG_CONFDIR}/postgresql.conf <<EOF
 wal_level = hot_standby
 max_wal_senders = ${PG_MAX_WAL_SENDERS}
 checkpoint_segments = ${PG_CHECKPOINT_SEGMENTS}
 wal_keep_segments = ${PG_WAL_SEGMENTS}
 EOF
+    fi
   fi
+  touch /tmp/configure_1
 fi
+
 
 cd ${PG_HOME}
 
@@ -264,7 +268,7 @@ if [[ ! -d ${PG_DATADIR} && ${PG_MODE} == snapshot ]]; then
 fi
 
 # Create slave
-if [[ ${PG_MODE} =~ ^slave ]]; then
+if [[ ${PG_MODE} =~ ^slave && ! -f /tmp/configure_2 ]]; then
    echo "Replicating database..."
   if [[ ! -d ${PG_DATADIR} ]]; then
     # Setup streaming replication.
@@ -282,6 +286,7 @@ standby_mode = 'on'
 primary_conninfo = 'host=${REPLICATION_HOST} port=${REPLICATION_PORT} user=${REPLICATION_USER} password=${REPLICATION_PASS} sslmode=${PG_SSLMODE}'
 trigger_file = '/tmp/postgresql.trigger'
 EOF
+  touch /tmp/configure_2
 fi
 
 # Initializing database
@@ -292,6 +297,7 @@ if [[ ! -d ${PG_DATADIR} ]]; then
   echo "Initializing database..."
   sudo -Hu ${PG_USER} ${PG_BINDIR}/initdb --pgdata=${PG_DATADIR} \
     --username=${PG_USER} --encoding=unicode --auth=trust >/dev/null
+  touch /tmp/.EMPTY_DB
 fi
 
 if [[ -n ${PG_OLD_VERSION} ]]; then
@@ -320,7 +326,7 @@ if [[ -n ${PG_OLD_VERSION} ]]; then
 fi
 
 # Create databases and users
-if [[ -z ${PG_MODE} || ${PG_MODE} =~ ^master ]]; then
+if [[ -f /tmp/.EMPTY_DB && ( -z ${PG_MODE} || ${PG_MODE} =~ ^master ) ]]; then
 
   if [[ ${PG_MODE} =~ ^master ]]; then
       remove_recovery_file
@@ -368,6 +374,8 @@ if [[ -z ${PG_MODE} || ${PG_MODE} =~ ^master ]]; then
       fi
     done
   fi
+
+  rm -f /tmp/.EMPTY_DB
 fi
 
 echo "Starting PostgreSQL server..."

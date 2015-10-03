@@ -24,7 +24,8 @@ RUN apt-get install -y wget \
  && apt-get update \
  && apt-get install -y postgresql-${PG_VERSION} postgresql-client-${PG_VERSION} postgresql-contrib-${PG_VERSION} lbzip2 \
  && rm -rf ${PG_HOME} \
- && rm -rf /var/lib/apt/lists/*
+ && rm -rf /var/lib/apt/lists/* \
+ && touch /tmp/.EMPTY_DB
 
 COPY entrypoint.sh /sbin/entrypoint.sh
 RUN chmod 755 /sbin/entrypoint.sh
