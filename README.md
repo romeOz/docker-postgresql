@@ -7,7 +7,7 @@ Table of Contents
  * [Quick Start](#quick-start)
  * [Persistence](#persistence)
  * [Creating user and database](#creating-user-and-database-at-launch) 
- * [Backup of a PostgreSQL cluster](#backup-of-a-postgresql-cluster)
+ * [Backuping](#backuping)
  * [Checking backup](#checking-backup)
  * [Restore from backup](#restore-from-backup)
  * [Dumping database](#dumping-database)
