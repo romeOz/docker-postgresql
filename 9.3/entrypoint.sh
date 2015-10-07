@@ -3,13 +3,10 @@ set -e
 
 PG_BACKUP_DIR=${PG_BACKUP_DIR:-"/tmp/backup"}
 PG_BACKUP_FILENAME=${PG_BACKUP_FILENAME:-"backup.last.tar.bz2"}
-PG_IMPORT=${PG_IMPORT:-}
-PG_CHECK=${PG_CHECK:-}
 BACKUP_OPTS=${BACKUP_OPTS:-}
-PG_WAL_SEGMENTS=${PG_WAL_SEGMENTS:-8}
-PG_CHECKPOINT_SEGMENTS=${PG_CHECKPOINT_SEGMENTS:-8}
-PG_MAX_WAL_SENDERS=${PG_MAX_WAL_SENDERS:-3}
 PG_ROTATE_BACKUP=${PG_ROTATE_BACKUP:-true}
+PG_RESTORE=${PG_RESTORE:-}
+PG_CHECK=${PG_CHECK:-}
 
 # set this env variable to true to enable a line in the
 # pg_hba.conf file to trust samenet.  this can be used to connect
@@ -29,6 +26,9 @@ REPLICATION_USER=${REPLICATION_USER:-replica}
 REPLICATION_PASS=${REPLICATION_PASS:-replica}
 REPLICATION_HOST=${REPLICATION_HOST:-}
 REPLICATION_PORT=${REPLICATION_PORT:-5432}
+PG_WAL_SEGMENTS=${PG_WAL_SEGMENTS:-8}
+PG_CHECKPOINT_SEGMENTS=${PG_CHECKPOINT_SEGMENTS:-8}
+PG_MAX_WAL_SENDERS=${PG_MAX_WAL_SENDERS:-3}
 
 # set this env variable to "require" to enable encryption and "verify-full" for verification.
 PG_SSLMODE=${PG_SSLMODE:-disable}
@@ -198,7 +198,7 @@ cd ${PG_HOME}
 
  # Export to backup
 if [[ ${PG_MODE} == backup ]]; then
-  echo "Backup database..."
+  echo "Backup databases..."
 
   if [[ -d ${PG_DATADIR} ]]; then
     echo 'Used host: local'
@@ -244,11 +244,11 @@ if [[ -n ${PG_CHECK} ]]; then
   exit 0
 fi
 
-# Import backup
-if [[ ! -d ${PG_DATADIR} && -n ${PG_IMPORT} ]]; then
-  if [[ -n ${PG_IMPORT} ]]; then
+# Restore from backup
+if [[ ! -d ${PG_DATADIR} && -n ${PG_RESTORE} ]]; then
+  if [[ -n ${PG_RESTORE} ]]; then
       echo "Import backup..."
-      import_backup ${PG_IMPORT}
+      import_backup ${PG_RESTORE}
   fi
 fi
 
