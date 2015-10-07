@@ -330,9 +330,9 @@ Environment variables
 
 `PG_BACKUP_FILENAME`: Set a specific filename backup (default "backup.last.bz2").
 
-`PG_CHECK`: Defines name of backup-file to initialize the database. Note that the dump must be inside the container, so you may need to mount them. You can specify as `default` that is equivalent to the `/tmp/backup/backup.last.bz2`
+`PG_CHECK`: Defines name of backup-file to initialize the database. Note that the backup must be inside the container, so you may need to mount them. You can specify as `default` that is equivalent to the `/tmp/backup/backup.last.bz2`
 
-`PG_RESTORE`: Defines name of backup-file to initialize the database. Note that the scripts must be inside the container, so you may need to mount them. You can specify as `default` that is equivalent to the `/tmp/backup/backup.last.bz2`
+`PG_RESTORE`: Defines name of backup-file to initialize the database. Note that the backup must be inside the container, so you may need to mount them. You can specify as `default` that is equivalent to the `/tmp/backup/backup.last.bz2`
 
 `PG_ROTATE_BACKUP`: Determines whether to use the rotation of backups (default "true").
 
