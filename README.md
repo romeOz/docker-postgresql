@@ -135,7 +135,7 @@ host    all             all             samenet                 trust
 Backuping
 -------------------
 
-The backup is made over a regular PostgreSQL connection, and uses the replication protocol (used [pg_basebackup](http://www.postgresql.org/docs/9.4/static/app-pgbasebackup.html)).
+The backup is made over a regular PostgreSQL connection, and uses the replication protocol (used [pg_basebackup](http://www.postgresql.org/docs/9.5/static/app-pgbasebackup.html)).
 
 First we need to raise the master:
 
@@ -391,7 +391,7 @@ Create the file `/etc/logrotate.d/docker-containers` with the following text ins
 Out of the box
 -------------------
  * Ubuntu 14.04.3 (LTS)
- * PostgreSQL 9.3/9.4
+ * PostgreSQL 9.3/9.4/9.5
 
 License
 -------------------
