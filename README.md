@@ -42,7 +42,7 @@ Quick Start
 Run the postgresql image:
 
 ```bash
-docker run --name postgresql -d romeoz/docker-postgresql
+docker run --name postgresql -d -p 5432:5432 romeoz/docker-postgresql
 ```
 
 The simplest way to login to the postgresql container as the administrative `postgres` user is to use the `docker exec` command to attach a new process to the running container and connect to the postgresql server over the unix socket.
