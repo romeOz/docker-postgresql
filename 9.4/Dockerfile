@@ -1,7 +1,8 @@
 FROM ubuntu:trusty
 MAINTAINER romeOz <serggalka@gmail.com>
 
-ENV PG_LOCALE="en_US.UTF-8" \
+ENV OS_LOCALE="en_US.UTF-8" \
+    OS_LANGUAGE="en_US:en" \
 	PG_VERSION=9.4 \
     PG_USER=postgres \
     PG_HOME=/var/lib/postgresql \
@@ -13,10 +14,10 @@ ENV PG_CONF_DIR="/etc/postgresql/${PG_VERSION}/main" \
     PG_DATA_DIR="${PG_HOME}/${PG_VERSION}/main"
 
 # Set the locale
-RUN locale-gen ${PG_LOCALE}
-ENV LANG=${PG_LOCALE} \
-    LANGUAGE=en_US:en \
-    LC_ALL=${PG_LOCALE}
+RUN locale-gen ${OS_LOCALE}
+ENV LANG=${OS_LOCALE} \
+    LANGUAGE=${OS_LANGUAGE} \
+    LC_ALL=${OS_LOCALE}
 
 RUN apt-get install -y wget \
  && wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add - \

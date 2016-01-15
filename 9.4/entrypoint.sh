@@ -1,6 +1,18 @@
 #!/bin/bash
 set -e
 
+OS_LOCALE=${OS_LOCALE:-}
+OS_LANGUAGE=${OS_LANGUAGE:-}
+
+PG_VERSION=${PG_VERSION:-}
+PG_USER=${PG_USER:-}
+PG_HOME=${PG_HOME:-}
+PG_LOG_DIR=${PG_LOG_DIR:-}
+PG_DATA_DIR=${PG_DATA_DIR:-}
+PG_RUN_DIR=${PG_RUN_DIR:-}
+PG_CONF_DIR=${PG_CONF_DIR:-}
+PG_BIN_DIR=${PG_BIN_DIR:-}
+
 PG_BACKUP_DIR=${PG_BACKUP_DIR:-"/tmp/backup"}
 PG_BACKUP_FILENAME=${PG_BACKUP_FILENAME:-"backup.last.tar.bz2"}
 PG_ROTATE_BACKUP=${PG_ROTATE_BACKUP:-true}
@@ -126,6 +138,8 @@ remove_recovery_file()
     rm ${PG_DATA_DIR}/recovery.conf
   fi
 }
+
+locale-gen ${OS_LOCALE} && update-locale LANG="${OS_LOCALE}" LANGUAGE="${OS_LANGUAGE}" && dpkg-reconfigure locales
 
 map_postgres_uid
 create_home_dir
@@ -362,7 +376,7 @@ if [[ -f /tmp/.EMPTY_DB && ( -z ${PG_MODE} || ${PG_MODE} =~ ^master ) ]]; then
     for db in $(awk -F',' '{for (i = 1 ; i <= NF ; i++) print $i}' <<< "${DB_NAME}"); do
       echo "Creating database \"${db}\"..."
 
-      echo "CREATE DATABASE ${db} ENCODING = 'UTF8' LC_COLLATE = '${PG_LOCALE}' LC_CTYPE = '${PG_LOCALE}' TEMPLATE = template0;" | \
+      echo "CREATE DATABASE ${db} ENCODING = 'UTF8' LC_COLLATE = '${OS_LOCALE}' LC_CTYPE = '${OS_LOCALE}' TEMPLATE = template0;" | \
       sudo -Hu ${PG_USER} ${PG_BIN_DIR}/postgres --single \
         -D ${PG_DATA_DIR} -c config_file=${PG_CONF_DIR}/postgresql.conf >/dev/null
 

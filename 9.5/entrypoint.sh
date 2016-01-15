@@ -3,6 +3,7 @@
 set -e
 
 OS_LOCALE=${OS_LOCALE:-}
+OS_LANGUAGE=${OS_LANGUAGE:-}
 
 PG_VERSION=${PG_VERSION:-}
 PG_USER=${PG_USER:-}
@@ -138,6 +139,8 @@ remove_recovery_file()
     rm ${PG_DATA_DIR}/recovery.conf
   fi
 }
+
+locale-gen ${OS_LOCALE} && update-locale LANG="${OS_LOCALE}" LANGUAGE="${OS_LANGUAGE}" && dpkg-reconfigure locales
 
 map_postgres_uid
 create_home_dir
