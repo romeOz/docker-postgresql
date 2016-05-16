@@ -12,7 +12,7 @@ docker run --name base_2 -d --link base_1:base_1 psg-9.4; sleep 10
 docker exec -it base_2 bash -c 'pg_isready -h ${BASE_1_PORT_5432_TCP_ADDR} -p 5432 | grep -c "accepting"'
 echo
 echo "-- Clear"
-docker rm -f -v $(sudo docker ps -aq); sleep 5
+docker rm -f -v base_1 base_2; sleep 5
 
 echo
 echo "-- Testing backup/checking on PostgreSQL 9.4"
@@ -25,7 +25,7 @@ docker run -it --rm -e 'PG_CHECK=/tmp/backup/backup.last.tar.bz2' -e 'DB_NAME=te
 docker run -it --rm -e 'PG_CHECK=default' -e 'DB_NAME=db' -v $(pwd)/vol94/backup:/tmp/backup psg-9.4 | tail -n 1 | grep -c 'Fail'; sleep 5
 echo
 echo "-- Clear"
-docker rm -f -v $(sudo docker ps -aq); sleep 5
+docker rm -f -v base_1; sleep 5
 rm -rf vol94*
 
 
@@ -53,7 +53,7 @@ docker exec -it base_3 bash -c 'sudo -u postgres psql test_1 -c "SELECT * FROM f
 docker exec -it base_4 bash -c 'sudo -u postgres psql test_1 -c "SELECT COUNT(*) FROM foo;" | grep -c -w "3"'
 echo
 echo "-- Clear"
-docker rm -f -v $(sudo docker ps -aq); sleep 5
+docker rm -f -v base_1 base_2 base_3 base_4; sleep 5
 
 echo
 echo "-- Restore master from backup-master"
@@ -65,7 +65,7 @@ docker exec -it base_2 bash -c 'sudo -u postgres psql test_1 -c "SELECT COUNT(*)
 
 echo
 echo "-- Clear"
-docker rm -f -v $(sudo docker ps -aq); sleep 5
+docker rm -f -v base_1 base_2; sleep 5
 rm -rf vol94*
 
 echo
@@ -92,7 +92,7 @@ docker exec -it base_4 bash -c 'sudo -u postgres psql test_1 -c "SELECT * FROM f
 docker exec -it base_4 bash -c 'sudo -u postgres psql test_1 -c "SELECT COUNT(*) FROM foo;" | grep -c -w "3"'
 echo
 echo "-- Clear"
-docker rm -f -v $(sudo docker ps -aq); sleep 5
+docker rm -f -v base_1 base_2 base_3 base_4; sleep 5
 
 echo
 echo "-- Restore master from backup-slave"
@@ -105,7 +105,7 @@ docker exec -it base_2 bash -c 'sudo -u postgres psql test_1 -c "SELECT COUNT(*)
 
 echo
 echo "-- Clear"
-docker rm -f -v $(sudo docker ps -aq); sleep 5
+docker rm -f -v base_1 base_2; sleep 5
 rm -rf vol94*
 
 echo
@@ -152,7 +152,7 @@ docker exec -it slave_2 bash -c 'sudo -u postgres psql test_1 -c "SELECT COUNT(*
 
 echo
 echo "-- Clear"
-docker rm -f -v $(sudo docker ps -aq); sleep 5
+docker rm -f -v slave_1 slave_2 master; sleep 5
 docker rmi psg-9.4
 rm -rf vol94*
 
