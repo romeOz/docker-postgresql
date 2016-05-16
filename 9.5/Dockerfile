@@ -19,11 +19,10 @@ ENV LANG=${OS_LOCALE} \
     LANGUAGE=${OS_LANGUAGE} \
     LC_ALL=${OS_LOCALE}
 
-RUN apt-get install -y wget \
+RUN apt-get update && apt-get install -y wget \
  && wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | apt-key add - \
  && echo 'deb http://apt.postgresql.org/pub/repos/apt/ trusty-pgdg main' > /etc/apt/sources.list.d/pgdg.list \
- && apt-get update \
- && apt-get install -y postgresql-${PG_VERSION} postgresql-client-${PG_VERSION} postgresql-contrib-${PG_VERSION} lbzip2 \
+ && apt-get update && apt-get install -y postgresql-${PG_VERSION} postgresql-client-${PG_VERSION} postgresql-contrib-${PG_VERSION} lbzip2 \
  && rm -rf ${PG_HOME} \
  && rm -rf /var/lib/apt/lists/* \
  && touch /tmp/.EMPTY_DB
