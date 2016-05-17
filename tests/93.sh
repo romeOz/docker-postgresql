@@ -2,34 +2,36 @@
 
 set -e
 
-#echo
-#echo
-#echo "-- Building PostgreSQL 9.3 image"
-#docker build -t psg-9.3 ../9.3/
-#docker network create pg_test
-#
-#echo
-#echo "-- Testing PostgreSQL 9.3 is running"
-#docker run --name base_1 --net pg_test -d psg-9.3; sleep 5
-#docker run --name base_2 --net pg_test -d psg-9.3; sleep 10
-#docker exec -it base_2 bash -c 'pg_isready -h base_1 -p 5432 | grep -c "accepting"'
-#echo
-#echo "-- Clear"
-#docker rm -f -v base_1 base_2; sleep 5
-#
-#echo
-#echo "-- Testing backup/checking on PostgreSQL 9.3"
-#docker run --name base_1 --net pg_test -d -e 'PG_MODE=master' -e 'DB_NAME=db_1,test_1' psg-9.3; sleep 10
-#echo "-- Backup"
-#docker run -it --rm --net pg_test -e 'PG_MODE=backup' -e 'REPLICATION_HOST=base_1' -e 'REPLICATION_PORT=5432' -v $(pwd)/vol93/backup:/tmp/backup psg-9.3 | grep -wc 'backup completed'; sleep 10
-#echo "-- Check"
-#docker run -it --rm -e 'PG_CHECK=default' -e 'DB_NAME=db_1' -v $(pwd)/vol93/backup:/tmp/backup psg-9.3 | tail -n 1 | grep -c 'Success'; sleep 5
-#docker run -it --rm -e 'PG_CHECK=/tmp/backup/backup.last.tar.bz2' -e 'DB_NAME=test_1' -v $(pwd)/vol93/backup:/tmp/backup psg-9.3 | tail -n 1 | grep -c 'Success'; sleep 5
-#docker run -it --rm -e 'PG_CHECK=default' -e 'DB_NAME=db' -v $(pwd)/vol93/backup:/tmp/backup psg-9.3 | tail -n 1 | grep -c 'Fail'; sleep 5
-#echo
-#echo "-- Clear"
-#docker rm -f -v base_1; sleep 5
-#sudo rm -rf vol93*
+echo
+echo
+echo "-- Building PostgreSQL 9.3 image"
+docker build -t psg-9.3 ../9.3/
+docker network create pg_test
+DIR_VOLUME=$(pwd)/vol93
+mkdir -p ${DIR_VOLUME}/backup
+
+echo
+echo "-- Testing PostgreSQL 9.3 is running"
+docker run --name base_1 --net pg_test -d psg-9.3; sleep 5
+docker run --name base_2 --net pg_test -d psg-9.3; sleep 10
+docker exec -it base_2 bash -c 'pg_isready -h base_1 -p 5432 | grep -c "accepting"'
+echo
+echo "-- Clear"
+docker rm -f -v base_1 base_2; sleep 5
+
+echo
+echo "-- Testing backup/checking on PostgreSQL 9.3"
+docker run --name base_1 --net pg_test -d -e 'PG_MODE=master' -e 'DB_NAME=db_1,test_1' psg-9.3; sleep 10
+echo "-- Backup"
+docker run -it --rm --net pg_test -e 'PG_MODE=backup' -e 'REPLICATION_HOST=base_1' -e 'REPLICATION_PORT=5432' -v ${DIR_VOLUME}/backup:/tmp/backup psg-9.3 | grep -wc 'backup completed'; sleep 10
+echo "-- Check"
+docker run -it --rm -e 'PG_CHECK=default' -e 'DB_NAME=db_1' -v ${DIR_VOLUME}/backup:/tmp/backup psg-9.3 | tail -n 1 | grep -c 'Success'; sleep 5
+docker run -it --rm -e 'PG_CHECK=/tmp/backup/backup.last.tar.bz2' -e 'DB_NAME=test_1' -v ${DIR_VOLUME}/backup:/tmp/backup psg-9.3 | tail -n 1 | grep -c 'Success'; sleep 5
+docker run -it --rm -e 'PG_CHECK=default' -e 'DB_NAME=db' -v ${DIR_VOLUME}/backup:/tmp/backup psg-9.3 | tail -n 1 | grep -c 'Fail'; sleep 5
+echo
+echo "-- Clear"
+docker rm -f -v base_1; sleep 5
+sudo rm -rf ${DIR_VOLUME}
 
 
 echo
@@ -47,10 +49,11 @@ docker exec -it base_1 sudo -u postgres psql test_1 -c "INSERT INTO foo (name) V
 docker exec -it base_3 bash -c 'sudo -u postgres psql test_1 -c "SELECT * FROM foo;"  | grep -c -w "Tom"'
 echo
 echo "-- Backup"
-docker run -it --rm --net pg_test -e 'PG_MODE=backup' -e 'REPLICATION_HOST=base_1' -e 'REPLICATION_PORT=5432' -v $(pwd)/vol93/backup_master:/tmp/backup psg-9.3 | grep -wc 'backup completed'; sleep 10
+mkdir -p ${DIR_VOLUME}/backup
+docker run -it --rm --net pg_test -e 'PG_MODE=backup' -e 'REPLICATION_HOST=base_1' -e 'REPLICATION_PORT=5432' -v ${DIR_VOLUME}/backup:/tmp/backup psg-9.3 | grep -wc 'backup completed'; sleep 10
 echo
 echo "-- Restore slave from backup-master"
-docker run --name base_4 -d --net pg_test -e 'PG_MODE=slave' -e 'PG_TRUST_LOCALNET=true' -e 'REPLICATION_HOST=base_1' -e 'PG_RESTORE=default'  -v $(pwd)/vol93/backup_master:/tmp/backup psg-9.3; sleep 10
+docker run --name base_4 -d --net pg_test -e 'PG_MODE=slave' -e 'PG_TRUST_LOCALNET=true' -e 'REPLICATION_HOST=base_1' -e 'PG_RESTORE=default'  -v ${DIR_VOLUME}/backup:/tmp/backup psg-9.3; sleep 10
 docker exec -it base_1 sudo -u postgres psql test_1 -c "INSERT INTO foo (name) VALUES ('Bob');"; sleep 5
 docker exec -it base_3 bash -c 'sudo -u postgres psql test_1 -c "SELECT * FROM foo;"  | grep -c -w "Bob"'
 docker exec -it base_4 bash -c 'sudo -u postgres psql test_1 -c "SELECT COUNT(*) FROM foo;" | grep -c -w "3"'
@@ -60,7 +63,7 @@ docker rm -f -v base_1 base_2 base_3 base_4; sleep 5
 
 echo
 echo "-- Restore master from backup-master"
-docker run --name base_1 --net pg_test -d -e 'PG_MODE=master' -e 'PG_RESTORE=default'  -v $(pwd)/vol93/backup_master:/tmp/backup psg-9.3; sleep 10
+docker run --name base_1 --net pg_test -d -e 'PG_MODE=master' -e 'PG_RESTORE=default'  -v ${DIR_VOLUME}/backup:/tmp/backup psg-9.3; sleep 10
 docker run --name base_2 -d --net pg_test -e 'PG_MODE=slave' -e 'PG_TRUST_LOCALNET=true' -e 'REPLICATION_HOST=base_1' psg-9.3; sleep 10
 docker exec -it base_1 sudo -u postgres psql test_1 -c "INSERT INTO foo (name) VALUES ('Jack');"; sleep 5
 docker exec -it base_2 bash -c 'sudo -u postgres psql test_1 -c "SELECT * FROM foo;"  | grep -c -w "Jack"'
@@ -69,7 +72,7 @@ docker exec -it base_2 bash -c 'sudo -u postgres psql test_1 -c "SELECT COUNT(*)
 echo
 echo "-- Clear"
 docker rm -f -v base_1 base_2; sleep 5
-sudo rm -rf vol93*
+sudo rm -rf ${DIR_VOLUME}
 
 echo
 echo "-- Create master"
@@ -85,10 +88,11 @@ docker run --name base_3 -d --net pg_test -e 'PG_MODE=slave_wal' -e 'PG_TRUST_LO
 
 echo
 echo "-- Backup"
-docker run -it --rm --net pg_test -e 'PG_MODE=backup' -e 'REPLICATION_HOST=base_3' -e 'REPLICATION_PORT=5432' -v $(pwd)/vol93/backup_slave:/tmp/backup psg-9.3 | grep -wc 'backup completed'; sleep 10
+mkdir -p ${DIR_VOLUME}/backup
+docker run -it --rm --net pg_test -e 'PG_MODE=backup' -e 'REPLICATION_HOST=base_3' -e 'REPLICATION_PORT=5432' -v ${DIR_VOLUME}/backup:/tmp/backup psg-9.3 | grep -wc 'backup completed'; sleep 10
 echo
 echo "-- Restore slave from backup-slave"
-docker run --name base_4 -d --net pg_test -e 'PG_MODE=slave' -e 'PG_TRUST_LOCALNET=true' -e 'REPLICATION_HOST=base_1' -e 'PG_RESTORE=default'  -v $(pwd)/vol93/backup_slave:/tmp/backup psg-9.3; sleep 10
+docker run --name base_4 -d --net pg_test -e 'PG_MODE=slave' -e 'PG_TRUST_LOCALNET=true' -e 'REPLICATION_HOST=base_1' -e 'PG_RESTORE=default'  -v ${DIR_VOLUME}/backup:/tmp/backup psg-9.3; sleep 10
 docker exec -it base_1 sudo -u postgres psql test_1 -c "INSERT INTO foo (name) VALUES ('Jack');"; sleep 5
 docker exec -it base_4 bash -c 'sudo -u postgres psql test_1 -c "SELECT * FROM foo;"  | grep -c -w "Chip"'
 docker exec -it base_4 bash -c 'sudo -u postgres psql test_1 -c "SELECT * FROM foo;"  | grep -c -w "Jack"'
@@ -99,7 +103,7 @@ docker rm -f -v base_1 base_2 base_3 base_4; sleep 5
 
 echo
 echo "-- Restore master from backup-slave"
-docker run --name base_1 -d --net pg_test -e 'PG_MODE=master' -e 'PG_RESTORE=default'  -v $(pwd)/vol93/backup_slave:/tmp/backup psg-9.3; sleep 10
+docker run --name base_1 -d --net pg_test -e 'PG_MODE=master' -e 'PG_RESTORE=default'  -v ${DIR_VOLUME}/backup:/tmp/backup psg-9.3; sleep 10
 docker run --name base_2 -d --net pg_test -e 'PG_MODE=slave' -e 'PG_TRUST_LOCALNET=true' -e 'REPLICATION_HOST=base_1' psg-9.3; sleep 10
 docker exec -it base_1 sudo -u postgres psql test_1 -c "INSERT INTO foo (name) VALUES ('Tom');"; sleep 5
 docker exec -it base_2 bash -c 'sudo -u postgres psql test_1 -c "SELECT * FROM foo;"  | grep -c -w "Tom"'
@@ -109,13 +113,14 @@ docker exec -it base_2 bash -c 'sudo -u postgres psql test_1 -c "SELECT COUNT(*)
 echo
 echo "-- Clear"
 docker rm -f -v base_1 base_2; sleep 5
-sudo rm -rf vol93*
+sudo rm -rf ${DIR_VOLUME}
 
 echo
 echo
 echo "-- Testing failover master on PostgreSQL 9.3"
 echo
 echo "-- Create master"
+mkdir -p ${DIR_VOLUME}/backup
 docker run --name master -d --net pg_test -e 'PG_MODE=master' -e 'DB_NAME=db_1,test_1' psg-9.3; sleep 10
 echo
 echo "-- Create slaves"
@@ -157,7 +162,7 @@ echo "-- Clear"
 docker rm -f -v slave_1 slave_2 master; sleep 5
 docker network rm pg_test
 docker rmi psg-9.3
-sudo rm -rf vol93*
+sudo rm -rf ${DIR_VOLUME}
 
 echo
 echo "-- Done"

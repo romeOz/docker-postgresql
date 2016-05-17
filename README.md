@@ -141,6 +141,7 @@ First we need to raise the master:
 
 ```bash
 docker network create pg_net
+
 docker run --name='psql-master' -d \
   --net pg_net
   -e 'PG_MODE=master' \
@@ -278,6 +279,7 @@ Create a master instance
 
 ```bash
 docker network create pg_net
+
 docker run --name='psql-master' -d \
   --net pg_net \
   -e 'PG_MODE=master' -e 'PG_TRUST_LOCALNET=true' \
