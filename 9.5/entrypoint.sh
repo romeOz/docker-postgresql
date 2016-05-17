@@ -140,7 +140,8 @@ remove_recovery_file()
   fi
 }
 
-locale-gen ${OS_LOCALE} && update-locale LANG="${OS_LOCALE}" LANGUAGE="${OS_LANGUAGE}" && dpkg-reconfigure locales
+# Sets a locale
+locale-gen ${OS_LOCALE} && update-locale LANG="${OS_LOCALE}" LANGUAGE="${OS_LANGUAGE}" && dpkg-reconfigure --frontend=noninteractive locales
 
 map_postgres_uid
 create_home_dir

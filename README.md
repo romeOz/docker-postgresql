@@ -21,7 +21,7 @@ Table of Contents
 Installation
 -------------------
 
- * [Install Docker](https://docs.docker.com/installation/) or [askubuntu](http://askubuntu.com/a/473720)
+ * [Install Docker 1.9+](https://docs.docker.com/installation/) or [askubuntu](http://askubuntu.com/a/473720)
  * Pull the latest version of the image.
  
 ```bash
@@ -140,7 +140,9 @@ The backup is made over a regular PostgreSQL connection, and uses the replicatio
 First we need to raise the master:
 
 ```bash
+docker network create pg_net
 docker run --name='psql-master' -d \
+  --net pg_net
   -e 'PG_MODE=master' \
   -e 'DB_NAME=dbname' \
   -e 'PG_TRUST_LOCALNET=true' \
@@ -151,7 +153,7 @@ Next, create a temporary container for backup:
 
 ```bash
 docker run -it --rm \
-  --link psql-master:psql-master \
+  --net pg_net \
   -e 'PG_MODE=backup' \
   -e 'REPLICATION_HOST=psql-master' \
   -e 'PG_TRUST_LOCALNET=true' \
@@ -168,7 +170,7 @@ Backuping slave requires that the slave was created with the WAL-settings.
 
 ```bash
 docker run --name psql-slave -d \
-  --link psql-master:psql-master \
+  --net pg_net \
   -e 'PG_MODE=slave_wal' -e 'PG_TRUST_LOCALNET=true' -e 'REPLICATION_HOST=psql-master' \
   romeoz/docker-postgresql
 ```
@@ -179,7 +181,7 @@ Next, create a temporary container for backup:
 
 ```bash
 docker run -it --rm \
-  --link psql-slave:psql-slave \
+  --net pg_net \
   -e 'PG_MODE=backup' -e 'REPLICATION_HOST=psql-slave' 
   -v -v /host/to/path/backup_slave:/tmp/backup \
   romeoz/docker-postgresql
@@ -229,7 +231,7 @@ docker run --name='psql-slave' -d \
 
 ```bash
 docker run --name master -d \
-  --link slave_wal:slave_wal \
+  --net pg_net \
   -e 'PG_MODE=master_restore' \
   -e 'PG_TRUST_LOCALNET=true' -e 'REPLICATION_HOST=slave_wal' \
   romeoz/docker-postgresql
@@ -275,7 +277,9 @@ Your master database must support replication or super-user access for the crede
 Create a master instance
 
 ```bash
+docker network create pg_net
 docker run --name='psql-master' -d \
+  --net pg_net \
   -e 'PG_MODE=master' -e 'PG_TRUST_LOCALNET=true' \
   -e 'REPLICATION_USER=replicator' -e 'REPLICATION_PASS=replicatorpass' \
   -e 'DB_NAME=dbname' -e 'DB_USER=dbuser' -e 'DB_PASS=dbpass' \
@@ -286,7 +290,7 @@ Create a slave instance + fast import backup from master
 
 ```bash
 docker run --name='psql-slave' -d  \
-  --link psql-master:psql-master  \
+  --net pg_net  \
   -e 'PG_MODE=slave' -e 'PG_TRUST_LOCALNET=true' \
   -e 'REPLICATION_HOST=psql-master' -e 'REPLICATION_PORT=5432' \
   -e 'REPLICATION_USER=replicator' -e 'REPLICATION_PASS=replicatorpass' \
@@ -390,7 +394,7 @@ Create the file `/etc/logrotate.d/docker-containers` with the following text ins
 
 Out of the box
 -------------------
- * Ubuntu 14.04.3 (LTS)
+ * Ubuntu 16.04 LTS
  * PostgreSQL 9.3/9.4/9.5
 
 License
