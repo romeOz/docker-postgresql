@@ -39,7 +39,7 @@ docker build -t="$USER/postgresql" .
 Quick Start
 -------------------
 
-Run the postgresql image:
+Run the postgresql container:
 
 ```bash
 docker run --name postgresql -d -p 5432:5432 romeoz/docker-postgresql
@@ -70,12 +70,12 @@ docker run --name postgresql -d \
   -v /host/to/path/data:/var/lib/postgresql romeoz/docker-postgresql
 ```
 
-This will make sure that the data stored in the database is not lost when the image is stopped and started again.
+This will make sure that the data stored in the database is not lost when the container is stopped and started again.
 
 Creating User and Database at Launch
 -------------------
 
-The image allows you to create a user and database at launch time.
+The container allows you to create a user and database at launch time.
 
 To create a new user you should specify the `DB_USER` and `DB_PASS` variables. The following command will create a new user *dbuser* with the password *dbpass*.
 
@@ -402,4 +402,4 @@ Out of the box
 License
 -------------------
 
-PostgreSQL container image is open-sourced software licensed under the [MIT license](http://opensource.org/licenses/MIT)
+PostgreSQL docker image is open-sourced software licensed under the [MIT license](http://opensource.org/licenses/MIT)
