@@ -1,5 +1,3 @@
-Project based on [sameersbn/docker-postgresql](https://github.com/sameersbn/docker-postgresql).
-
 Table of Contents
 -------------------
 
