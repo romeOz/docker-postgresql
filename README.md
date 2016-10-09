@@ -395,7 +395,7 @@ Create the file `/etc/logrotate.d/docker-containers` with the following text ins
 Out of the box
 -------------------
  * Ubuntu 16.04 LTS
- * PostgreSQL 9.3/9.4/9.5
+ * PostgreSQL 9.3, 9.4, 9.5 or 9.6
 
 License
 -------------------
