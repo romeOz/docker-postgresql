@@ -2,8 +2,7 @@
 
 set -e
 
-OS_LOCALE=${OS_LOCALE:-}
-OS_LANGUAGE=${OS_LANGUAGE:-}
+OS_LOCALE=${OS_LOCALE:-"en_US.UTF-8"}
 
 PG_VERSION=${PG_VERSION:-}
 PG_USER=${PG_USER:-}
@@ -141,7 +140,13 @@ remove_recovery_file()
 }
 
 # Sets a locale
-locale-gen ${OS_LOCALE} && update-locale LANG="${OS_LOCALE}" LANGUAGE="${OS_LANGUAGE}" && dpkg-reconfigure --frontend=noninteractive locales
+#localedef -i en_US -c -f UTF-8 -A /usr/share/locale/locale.alias ${OS_LOCALE}
+#export LANG=${OS_LOCALE}
+#export LANG=${OS_LOCALE}
+#export LANGUAGE=${OS_LOCALE}
+#export LC_ALL=${OS_LOCALE}
+#locale-gen ${OS_LOCALE} && update-locale LANG="${OS_LOCALE}" LANGUAGE="${OS_LANGUAGE}" && dpkg-reconfigure --frontend=noninteractive locales
+locale-gen ${OS_LOCALE} && dpkg-reconfigure --frontend=noninteractive locales
 
 map_postgres_uid
 create_home_dir

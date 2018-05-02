@@ -162,6 +162,7 @@ echo "-- Clear"
 docker rm -f -v slave_1 slave_2 master; sleep 5
 docker network rm pg_test
 docker rmi psg-9.3
+docker network rm pg_test
 sudo rm -rf ${DIR_VOLUME}
 
 echo
