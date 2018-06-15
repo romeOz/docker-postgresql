@@ -1,7 +1,8 @@
 FROM ubuntu:xenial
 MAINTAINER romeOz <serggalka@gmail.com>
 
-ENV OS_LOCALE="en_US.UTF-8"
+ENV OS_LOCALE="en_US.UTF-8" \
+    DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y locales && locale-gen ${OS_LOCALE}
 ENV LANG=${OS_LOCALE} \
     LANGUAGE=${OS_LOCALE} \
@@ -10,8 +11,7 @@ ENV LANG=${OS_LOCALE} \
     PG_USER=postgres \
     PG_HOME=/var/lib/postgresql \
     PG_RUN_DIR=/run/postgresql \
-    PG_LOG_DIR=/var/log/postgresql \
-    DEBIAN_FRONTEND=noninteractive
+    PG_LOG_DIR=/var/log/postgresql
 
 ENV PG_CONF_DIR="/etc/postgresql/${PG_VERSION}/main" \
     PG_BIN_DIR="/usr/lib/postgresql/${PG_VERSION}/bin" \
