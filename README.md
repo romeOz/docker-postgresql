@@ -4,8 +4,8 @@ Table of Contents
  * [Installation](#installation)
  * [Quick Start](#quick-start)
  * [Persistence](#persistence)
- * [Creating user and database](#creating-user-and-database-at-launch)
- * [Creating Database with specified locale](#creating-database-with-specified-locale)  
+ * [Creating user and database](#creating-user-and-database-at-run)
+ * [Creating Database with specified locale](#creating-database-with-specified-locale-at-run)  
  * [Backuping](#backuping)
  * [Checking backup](#checking-backup)
  * [Restore from backup](#restore-from-backup)
@@ -71,10 +71,10 @@ docker run --name postgresql -d \
 
 This will make sure that the data stored in the database is not lost when the container is stopped and started again.
 
-Creating User and Database at Launch
+Creating User and Database at run
 -------------------
 
-The container allows you to create a user and database at launch time.
+The container allows you to create a user and database at run time.
 
 To create a new user you should specify the `DB_USER` and `DB_PASS` variables. The following command will create a new user *dbuser* with the password *dbpass*.
 
@@ -131,7 +131,7 @@ This has the effect of adding the following to the `pg_hba.conf` file:
 host    all             all             samenet                 trust
 ```
 
-Creating Database with specified locale at Launch
+Creating Database with specified locale at run
 -------------------
 
 ```bash
