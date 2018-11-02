@@ -4,7 +4,8 @@ Table of Contents
  * [Installation](#installation)
  * [Quick Start](#quick-start)
  * [Persistence](#persistence)
- * [Creating user and database](#creating-user-and-database-at-launch) 
+ * [Creating user and database](#creating-user-and-database-at-launch)
+ * [Creating Database with specified locale](#creating-database-with-specified-locale)  
  * [Backuping](#backuping)
  * [Checking backup](#checking-backup)
  * [Restore from backup](#restore-from-backup)
@@ -128,6 +129,24 @@ This has the effect of adding the following to the `pg_hba.conf` file:
 
 ```
 host    all             all             samenet                 trust
+```
+
+Creating Database with specified locale at Launch
+-------------------
+
+```bash
+docker run --name postgresql -d \
+  -e 'OS_LOCALE=ru_RU.UTF-8' -e 'DB_NAME=dbname' romeoz/docker-postgresql
+```
+
+or after run container
+
+```bash
+docker run --name postgresql -d \
+  -e 'OS_LOCALE=ru_RU.UTF-8' romeoz/docker-postgresql
+
+docker exec -it postgresql bash -c 'sudo -u postgres psql'
+CREATE DATABASE dbname ENCODING = 'UTF8'  LC_COLLATE = 'ru_RU.UTF-8' LC_CTYPE = 'ru_RU.UTF-8' TEMPLATE = template0; 
 ```
 
 Backuping
@@ -350,6 +369,8 @@ Environment variables
 
 `PG_SSLMODE`: Set this env variable to "require" to enable encryption and "verify-full" for verification (default "disable").
 
+`OS_LOCALE`: Set a locale DB (default "en_US.UTF-8").
+
 Logging
 -------------------
 
@@ -394,8 +415,8 @@ Create the file `/etc/logrotate.d/docker-containers` with the following text ins
 
 Out of the box
 -------------------
- * Ubuntu 16.04 LTS
- * PostgreSQL 9.3, 9.4, 9.5, 9.6 or 10
+ * Ubuntu 16.04/18.04 LTS
+ * PostgreSQL 9.3, 9.4, 9.5, 9.6, 10 or 11
 
 License
 -------------------
