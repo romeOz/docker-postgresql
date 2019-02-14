@@ -136,14 +136,14 @@ Creating Database with specified locale at run
 
 ```bash
 docker run --name postgresql -d \
-  -e 'PG_LOCALE=ru_RU.UTF-8' -e 'DB_NAME=dbname' romeoz/docker-postgresql
+  -e 'DB_LOCALE=ru_RU.UTF-8' -e 'DB_NAME=dbname' romeoz/docker-postgresql
 ```
 
 or after run container
 
 ```bash
 docker run --name postgresql -d \
-  -e 'PG_LOCALE=ru_RU.UTF-8' romeoz/docker-postgresql
+  -e 'DB_LOCALE=ru_RU.UTF-8' romeoz/docker-postgresql
 
 docker exec -it postgresql bash -c 'sudo -u postgres psql'
 CREATE DATABASE dbname ENCODING = 'UTF8'  LC_COLLATE = 'ru_RU.UTF-8' LC_CTYPE = 'ru_RU.UTF-8' TEMPLATE = template0; 
@@ -347,8 +347,6 @@ Environment variables
 
 `PG_USER`: Set a specific username for the admin account (default "postgres").
 
-`PG_LOCALE` (alias `OS_LOCALE`): Set a locale DB (default "en_US.UTF-8").
-
 `PG_TZ`:  Set a timezone DB (default "UTC").
 
 `PG_MODE`: Set a specific mode. Takes on the values `master`, `slave` or `backup`.
@@ -372,6 +370,14 @@ Environment variables
 `PG_TRUST_LOCALNET`: Set this env variable to true to enable a line in the pg_hba.conf file to trust samenet. This can be used to connect from other containers on the same host without authentication (default "false").
 
 `PG_SSLMODE`: Set this env variable to "require" to enable encryption and "verify-full" for verification (default "disable").
+
+`DB_NAME`: Set name DB.
+
+`DB_USER`: Set name by user.
+
+`DB_PASS`: Set password by user.
+
+`DB_LOCALE` (alias `OS_LOCALE`): Set a locale DB (default "en_US.UTF-8").
 
 Logging
 -------------------

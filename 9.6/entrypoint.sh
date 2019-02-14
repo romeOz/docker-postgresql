@@ -10,7 +10,6 @@ PG_DATA_DIR=${PG_DATA_DIR:-}
 PG_RUN_DIR=${PG_RUN_DIR:-}
 PG_CONF_DIR=${PG_CONF_DIR:-}
 PG_BIN_DIR=${PG_BIN_DIR:-}
-PG_LOCALE=${OS_LOCALE:-"en_US.UTF-8"}
 PG_TZ=${PG_TZ:-"UTC"}
 
 PG_BACKUP_DIR=${PG_BACKUP_DIR:-"/tmp/backup"}
@@ -27,6 +26,7 @@ PG_TRUST_LOCALNET=${PG_TRUST_LOCALNET:-false}
 DB_NAME=${DB_NAME:-}
 DB_USER=${DB_USER:-}
 DB_PASS=${DB_PASS:-}
+DB_LOCALE=${DB_LOCALE:-"${OS_LOCALE}"}
 DB_UNACCENT=${DB_UNACCENT:false}
 
 # set this environment variable to master, slave or snapshot to use replication features.
@@ -140,13 +140,13 @@ remove_recovery_file()
 }
 
 # Sets a locale
-#localedef -i en_US -c -f UTF-8 -A /usr/share/locale/locale.alias ${PG_LOCALE}
-#export LANG=${PG_LOCALE}
-#export LANG=${PG_LOCALE}
-#export LANGUAGE=${PG_LOCALE}
-#export LC_ALL=${PG_LOCALE}
-#locale-gen ${PG_LOCALE} && update-locale LANG="${PG_LOCALE}" LANGUAGE="${OS_LANGUAGE}" && dpkg-reconfigure --frontend=noninteractive locales
-locale-gen ${PG_LOCALE} && dpkg-reconfigure --frontend=noninteractive locales
+#localedef -i en_US -c -f UTF-8 -A /usr/share/locale/locale.alias ${DB_LOCALE}
+#export LANG=${DB_LOCALE}
+#export LANG=${DB_LOCALE}
+#export LANGUAGE=${DB_LOCALE}
+#export LC_ALL=${DB_LOCALE}
+#locale-gen ${DB_LOCALE} && update-locale LANG="${DB_LOCALE}" LANGUAGE="${OS_LANGUAGE}" && dpkg-reconfigure --frontend=noninteractive locales
+locale-gen ${DB_LOCALE} && dpkg-reconfigure --frontend=noninteractive locales
 
 map_postgres_uid
 create_home_dir
@@ -382,7 +382,7 @@ if [[ -f /tmp/.EMPTY_DB && ( -z ${PG_MODE} || ${PG_MODE} =~ ^master ) ]]; then
     for db in $(awk -F',' '{for (i = 1 ; i <= NF ; i++) print $i}' <<< "${DB_NAME}"); do
       echo "Creating database \"${db}\"..."
 
-      echo "CREATE DATABASE ${db} ENCODING = 'UTF8' LC_COLLATE = '${PG_LOCALE}' LC_CTYPE = '${PG_LOCALE}' TEMPLATE = template0;" | \
+      echo "CREATE DATABASE ${db} ENCODING = 'UTF8' LC_COLLATE = '${DB_LOCALE}' LC_CTYPE = '${DB_LOCALE}' TEMPLATE = template0;" | \
       sudo -Hu ${PG_USER} ${PG_BIN_DIR}/postgres --single \
         -D ${PG_DATA_DIR} -c config_file=${PG_CONF_DIR}/postgresql.conf >/dev/null
 
