@@ -2,8 +2,6 @@
 
 set -e
 
-OS_LOCALE=${OS_LOCALE:-"en_US.UTF-8"}
-
 PG_VERSION=${PG_VERSION:-}
 PG_USER=${PG_USER:-}
 PG_HOME=${PG_HOME:-}
@@ -12,6 +10,7 @@ PG_DATA_DIR=${PG_DATA_DIR:-}
 PG_RUN_DIR=${PG_RUN_DIR:-}
 PG_CONF_DIR=${PG_CONF_DIR:-}
 PG_BIN_DIR=${PG_BIN_DIR:-}
+PG_LOCALE=${OS_LOCALE:-"en_US.UTF-8"}
 PG_TZ=${PG_TZ:-"UTC"}
 
 PG_BACKUP_DIR=${PG_BACKUP_DIR:-"/tmp/backup"}
@@ -141,13 +140,13 @@ remove_recovery_file()
 }
 
 # Sets a locale
-#localedef -i en_US -c -f UTF-8 -A /usr/share/locale/locale.alias ${OS_LOCALE}
-#export LANG=${OS_LOCALE}
-#export LANG=${OS_LOCALE}
-#export LANGUAGE=${OS_LOCALE}
-#export LC_ALL=${OS_LOCALE}
-#locale-gen ${OS_LOCALE} && update-locale LANG="${OS_LOCALE}" LANGUAGE="${OS_LANGUAGE}" && dpkg-reconfigure --frontend=noninteractive locales
-locale-gen ${OS_LOCALE} && dpkg-reconfigure --frontend=noninteractive locales
+#localedef -i en_US -c -f UTF-8 -A /usr/share/locale/locale.alias ${PG_LOCALE}
+#export LANG=${PG_LOCALE}
+#export LANG=${PG_LOCALE}
+#export LANGUAGE=${PG_LOCALE}
+#export LC_ALL=${PG_LOCALE}
+#locale-gen ${PG_LOCALE} && update-locale LANG="${PG_LOCALE}" LANGUAGE="${OS_LANGUAGE}" && dpkg-reconfigure --frontend=noninteractive locales
+locale-gen ${PG_LOCALE} && dpkg-reconfigure --frontend=noninteractive locales
 
 map_postgres_uid
 create_home_dir
@@ -383,7 +382,7 @@ if [[ -f /tmp/.EMPTY_DB && ( -z ${PG_MODE} || ${PG_MODE} =~ ^master ) ]]; then
     for db in $(awk -F',' '{for (i = 1 ; i <= NF ; i++) print $i}' <<< "${DB_NAME}"); do
       echo "Creating database \"${db}\"..."
 
-      echo "CREATE DATABASE ${db} ENCODING = 'UTF8' LC_COLLATE = '${OS_LOCALE}' LC_CTYPE = '${OS_LOCALE}' TEMPLATE = template0;" | \
+      echo "CREATE DATABASE ${db} ENCODING = 'UTF8' LC_COLLATE = '${PG_LOCALE}' LC_CTYPE = '${PG_LOCALE}' TEMPLATE = template0;" | \
       sudo -Hu ${PG_USER} ${PG_BIN_DIR}/postgres --single \
         -D ${PG_DATA_DIR} -c config_file=${PG_CONF_DIR}/postgresql.conf >/dev/null
 
