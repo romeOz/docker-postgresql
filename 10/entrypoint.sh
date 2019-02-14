@@ -12,6 +12,7 @@ PG_DATA_DIR=${PG_DATA_DIR:-}
 PG_RUN_DIR=${PG_RUN_DIR:-}
 PG_CONF_DIR=${PG_CONF_DIR:-}
 PG_BIN_DIR=${PG_BIN_DIR:-}
+PG_TZ=${PG_TZ:-"UTC"}
 
 PG_BACKUP_DIR=${PG_BACKUP_DIR:-"/tmp/backup"}
 PG_BACKUP_FILENAME=${PG_BACKUP_FILENAME:-"backup.last.tar.bz2"}
@@ -401,4 +402,4 @@ fi
 
 echo "Starting PostgreSQL server..."
 exec start-stop-daemon --start --chuid ${PG_USER}:${PG_USER} --exec ${PG_BIN_DIR}/postgres -- \
-  -D ${PG_DATA_DIR} -c config_file=${PG_CONF_DIR}/postgresql.conf
+  -D ${PG_DATA_DIR} -c config_file=${PG_CONF_DIR}/postgresql.conf -c timezone=${PG_TZ}

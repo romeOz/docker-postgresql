@@ -347,6 +347,8 @@ Environment variables
 
 `PG_USER`: Set a specific username for the admin account (default "postgres").
 
+`PG_TZ`:  Set a timezone DB (default "UTC").
+
 `PG_MODE`: Set a specific mode. Takes on the values `master`, `slave` or `backup`.
 
 `PG_BACKUP_DIR`: Set a specific backup directory (default "/tmp/backup").
